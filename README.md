@@ -1,7 +1,7 @@
-# football_databricks
+# football_snowflake
 # ⚽ Transfer Market Data Platform: Project Logbook
 
-This is my personal side project focused on building a solid data transformation pipeline using raw football transfer and performance statistics. The goal was to take source files, run them through an ETL process on Databricks, and produce Gold-level fact tables that are actually usable for reporting—stuff like player performance metrics for transfer decision-making (though I haven't actually built the dashboard yet).
+This is my personal side project focused on building a solid data transformation pipeline using raw football transfer and performance statistics. The goal was to take source files, run them through an ETL process on Snowflake, and produce Gold-level fact tables that are actually usable for reporting—stuff like player performance metrics for transfer decision-making (though I haven't actually built the dashboard yet).
 
 The main reason this project exists was to force myself to learn dbt Core. Every architectural choice, data contract, and test was done with the intent of practising proper dbt principles: modularity, testing, and documentation.
 
@@ -31,4 +31,4 @@ This section documents my journey building this analytics platform, highlighting
 | **26/11/2025** | **Custom Data Quality Test** | Created a singular test in the `tests/` directory to explicitly check that `total_appearances`, `total_goals`, and `total_assists` are not below zero in the Gold fact table, ensuring logical data integrity. | 
 | **26/11/2025** | **Security Posture** | Added the `.vscode/` directory to `.gitignore` and used `git rm --cached` to stop tracking, ensuring credentials stored in `settings.json` are never accidentally committed to the repository. |
 | **11/12/2025** | **Refactoring for Production Readiness** | Refactored the initial Jupyter Notebook (`.ipynb`) used for prototyping into a modular, lightweight Python script (`load_raw_sources.py`), the preferred format for automated Databricks Jobs. | 
-| **23/07/2026** | **Development Environment** | Migrating worflow to Snowflake. | 
+| **23/07/2026** | **Development Environment** | Migrating workflow to Snowflake. | 

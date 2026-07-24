@@ -5,3 +5,5 @@
 /.vscode
 .vscode/settings.json
 profiling/data
+rsa_key.p8
+rsa_key.pub

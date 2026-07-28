@@ -9,7 +9,7 @@ WITH player_appearances AS (
         pl.date_of_birth,
         ap.appearance_date,
         -- facts
-        FLOOR(DATEDIFF(ap.appearance_date, pl.date_of_birth) / 365.25) AS appearance_age_in_years,
+        DATEDIFF(YEAR,ap.appearance_date, pl.date_of_birth) AS appearance_age_in_years,
         gm.season,
         ap.yellow_cards,
         ap.red_cards,

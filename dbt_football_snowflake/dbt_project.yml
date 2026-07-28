@@ -55,7 +55,6 @@ models:
       +docs:
         node_color: "#A0A0A0" # silver color
 
-
     gold:
       +tags: ["gold", "marts"] # all marts should be tagged with minimum ["silver", "marts"]
       +materialized: table # mart/gold best practice is tbl

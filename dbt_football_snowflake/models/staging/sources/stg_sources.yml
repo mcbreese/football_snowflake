@@ -4,8 +4,8 @@ sources:
   - name: football_raw # The single logical source name for all raw data
     tags: ["raw", "source"] # Tags for easy selection/exclusion
     description: "The raw, untransformed football data ingested into Databricks."
-    catalog: learning_catalog
-    schema: football_raw # The schema where the raw tables reside
+    database: dev_raw
+    schema: public # The schema where the raw tables reside
     
     tables:
       - name: raw_appearances

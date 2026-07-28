@@ -21,18 +21,16 @@ models:
         tests:
           - not_null
           - relationships:
-              arguments:
-                to: ref('dim_players')
-                field: player_id
+              to: ref('dim_players')
+              field: player_id
       - name: club_id
         description: "{{ doc('club_id') }}" # Inherited from Staging Docs
         data_type: INT
         tests:
           - not_null
           - relationships:
-              arguments:
-                to: ref('dim_clubs')
-                field: club_id
+              to: ref('dim_clubs')
+              field: club_id
       - name: season
         description: "{{ doc('season') }}" # Inherited from Staging Docs
         data_type: INT
@@ -45,22 +43,22 @@ models:
           - not_null
       - name: total_appearances
         description: "{{ doc('total_appearances') }}" # New block
-        data_type: LONG
+        data_type: NUMBER
       - name: total_yellow_cards
         description: "{{ doc('total_yellow_cards') }}" # New block
-        data_type: LONG
+        data_type: NUMBER
       - name: total_red_cards
         description: "{{ doc('total_red_cards') }}" # New block
-        data_type: LONG
+        data_type: NUMBER
       - name: total_goals
         description: "{{ doc('total_goals') }}" # New block
-        data_type: LONG
+        data_type: NUMBER
       - name: total_assists
         description: "{{ doc('total_assists') }}" # New block
-        data_type: LONG
+        data_type: NUMBER
       - name: total_minutes_played
         description: "{{ doc('total_minutes_played') }}" # New block
-        data_type: LONG
+        data_type: NUMBER
       - name: avg_mins_per_appearance
         description: "{{ doc('avg_mins_per_appearance') }}" # New block
         data_type: DECIMAL(18, 8)
@@ -69,13 +67,13 @@ models:
         data_type: DECIMAL(18, 8)
       - name: games_won
         description: "{{ doc('games_won') }}" # New block
-        data_type: LONG
+        data_type: NUMBER
       - name: games_lost
         description: "{{ doc('games_lost') }}" # New block
-        data_type: LONG
+        data_type: NUMBER
       - name: games_drawn
         description: "{{ doc('games_drawn') }}" # New block
-        data_type: LONG
+        data_type: NUMBER
       - name: first_appearance_loaded_timestamp
         description: "{{ doc('first_appearance_loaded_timestamp') }}" # New block
         data_type: TIMESTAMP
@@ -95,9 +93,8 @@ models:
         tests:
           - not_null
           - relationships:
-              arguments:
-                to: ref('dim_players')
-                field: player_id
+              to: ref('dim_players')
+              field: player_id
       - name: from_club_id
         description: "{{ doc('from_club_id') }}" # New block
         data_type: INT
@@ -113,10 +110,10 @@ models:
           - not_null
       - name: transfer_fee
         description: "{{ doc('transfer_fee') }}" # New block
-        data_type: DOUBLE
+        data_type: NUMBER
       - name: market_value_in_eur
         description: "{{ doc('market_value_in_eur') }}" # New block
-        data_type: DOUBLE
+        data_type: NUMBER
       - name: transfer_season
         description: "{{ doc('transfer_season') }}" # New block
         data_type: STRING

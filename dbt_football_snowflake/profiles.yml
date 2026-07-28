@@ -12,7 +12,7 @@ dbt_football_snowflake:
       warehouse: DEV_TRANSFORM_WH                      # Or whatever your active warehouse is named
       # Target Landing Database for Dev
       database: DEV_ANALYTICS
-      schema: PUBLIC                            # Fallback default schema
+      schema: football                            # Schema name gets concatened due to the settings in the project yaml
       # Key-Pair setup
       private_key_path: "C:/Users/thoma/Documents/PBI_GIT/football_snowflake/dbt_football_snowflake/rsa_key.p8"
       private_key_passphrase: "snowflake"

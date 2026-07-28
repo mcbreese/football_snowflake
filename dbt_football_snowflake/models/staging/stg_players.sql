@@ -23,7 +23,7 @@ players as (
         -- to ensure consistency in our data contract.
         cast(date_of_birth as date) as date_of_birth,
         -- facts
-        FLOOR(DATEDIFF(current_date(), date_of_birth) / 365.25) AS age_in_years,
+        DATEDIFF(YEAR, date_of_birth, current_date()) AS age_in_years,
         last_season,
         -- metadata
         loaded_timestamp,

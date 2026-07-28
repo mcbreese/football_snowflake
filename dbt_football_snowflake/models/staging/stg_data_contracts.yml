@@ -36,26 +36,23 @@ models:
         tests:
           - not_null
           - relationships:
-              arguments:
-                to: ref('stg_players')
-                field: player_id
+              to: ref('stg_players')
+              field: player_id
       - name: player_club_id
         description: "{{ doc('player_club_id') }}"
         data_type: INT
         tests:
           - not_null
           - relationships:
-              arguments:
-                to: ref('stg_clubs')
-                field: club_id
+              to: ref('stg_clubs')
+              field: club_id
       - name: competition_id
         description: "{{ doc('competition_id') }}"
         data_type: STRING
         tests:
           - relationships:
-              arguments:
-                to: ref('stg_competitions')
-                field: competition_id
+              to: ref('stg_competitions')
+              field: competition_id
       - name: player_name
         description: "{{ doc('player_name') }}"
         data_type: STRING
@@ -96,9 +93,8 @@ models:
         data_type: INT
         tests:
           - relationships:
-              arguments:
-                to: ref('stg_clubs')
-                field: club_id
+              to: ref('stg_clubs')
+              field: club_id
       - name: domestic_competition_id
         description: "{{ doc('domestic_competition_id') }}"
         data_type: STRING
@@ -113,13 +109,13 @@ models:
         data_type: INT
       - name: average_age
         description: "{{ doc('average_age') }}"
-        data_type: DOUBLE
+        data_type: number
       - name: foreigners_number
         description: "{{ doc('foreigners_number') }}"
         data_type: INT
       - name: foreigners_percentage
         description: "{{ doc('foreigners_percentage') }}"
-        data_type: DOUBLE
+        data_type: number
       - name: national_team_players
         description: "{{ doc('national_team_players') }}"
         data_type: INT
@@ -164,9 +160,8 @@ models:
         data_type: STRING
         tests:
           - relationships:
-              arguments:
-                to: ref('stg_competitions')
-                field: competition_id
+              to: ref('stg_competitions')
+              field: competition_id
       - name: country_id
         description: "{{ doc('country_id') }}"
         data_type: INT
@@ -218,33 +213,29 @@ models:
         tests:
           - not_null
           - relationships:
-              arguments:
-                to: ref('stg_games')
-                field: game_id
+              to: ref('stg_games')
+              field: game_id
       - name: competition_id
         description: "{{ doc('competition_id') }}"
         data_type: STRING
         tests:
           - relationships:
-              arguments:
-                to: ref('stg_competitions')
-                field: competition_id
+              to: ref('stg_competitions')
+              field: competition_id
       - name: home_club_id
         description: "{{ doc('home_club_id') }}"
         data_type: INT
         tests:
           - relationships:
-              arguments:
-                to: ref('stg_clubs')
-                field: club_id
+              to: ref('stg_clubs')
+              field: club_id
       - name: away_club_id
         description: "{{ doc('away_club_id') }}"
         data_type: INT
         tests:
           - relationships:
-              arguments:
-                to: ref('stg_clubs')
-                field: club_id
+              to: ref('stg_clubs')
+              field: club_id
       - name: season
         description: "{{ doc('season') }}"
         data_type: INT
@@ -281,18 +272,16 @@ models:
         tests:
           - not_null
           - relationships:
-              arguments:
-                to: ref('stg_players')
-                field: player_id
+              to: ref('stg_players')
+              field: player_id
       - name: current_club_id
         description: "{{ doc('current_club_id') }}"
         data_type: INT
         tests:
           - not_null
           - relationships:
-              arguments:
-                to: ref('stg_clubs')
-                field: club_id
+              to: ref('stg_clubs')
+              field: club_id
       - name: valuation_date
         description: "{{ doc('valuation_date') }}"
         data_type: DATE
@@ -323,18 +312,16 @@ models:
         tests:
           - not_null
           - relationships:
-              arguments:
-                to: ref('stg_players')
-                field: player_id
+              to: ref('stg_players')
+              field: player_id
       - name: current_club_id
         description: "{{ doc('current_club_id') }}"
         data_type: INT
         tests:
           - not_null
           - relationships:
-              arguments:
-                to: ref('stg_clubs')
-                field: club_id
+              to: ref('stg_clubs')
+              field: club_id
       - name: player_name
         description: "{{ doc('player_name') }}"
         data_type: STRING
@@ -386,9 +373,8 @@ models:
         tests:
           - not_null
           - relationships:
-              arguments:
-                to: ref('stg_players')
-                field: player_id
+              to: ref('stg_players')
+              field: player_id
       - name: from_club_id
         description: "{{ doc('from_club_id') }}"
         data_type: INT
@@ -403,10 +389,10 @@ models:
         data_type: STRING
       - name: transfer_fee
         description: "{{ doc('transfer_fee') }}"
-        data_type: DOUBLE
+        data_type: number
       - name: market_value_in_eur
         description: "{{ doc('market_value_in_eur') }}"
-        data_type: DOUBLE
+        data_type: number
       - name: loaded_timestamp
         description: "{{ doc('loaded_timestamp') }}"
         data_type: TIMESTAMP

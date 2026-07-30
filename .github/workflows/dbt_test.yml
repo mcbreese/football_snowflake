@@ -23,6 +23,7 @@ jobs:
       SNOWFLAKE_PW: ${{ secrets.SNOWFLAKE_PW }}
       PK_PATH: ${{ secrets.PK_PATH }}
       PK_PASSPHRASE: ${{ secrets.PK_PASSPHRASE }}
+      RSA_KEY_CONTENTS: ${{ secrets.RSA_KEY_CONTENTS }}
 
     steps:
       # STEP 1: Download a copy of your repository's code onto the Linux virtual machine
@@ -41,6 +42,11 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install dbt-snowflake
+
+      - name: Write RSA Key to File
+        run: |
+          echo "${{ secrets.RSA_KEY_CONTENTS }}" > rsa_key.p8
+          chmod 600 rsa_key.p8
 
       # STEP 4: Test that dbt can read your profiles.yml and connect to your database
       # 'working-directory' tells GitHub to move into your subfolder before running the command

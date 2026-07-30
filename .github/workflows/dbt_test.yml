@@ -52,6 +52,9 @@ jobs:
       # 'working-directory' tells GitHub to move into your subfolder before running the command
       - name: Check dbt connection
         working-directory: ./dbt_football_snowflake # Change subfolder
+        env:
+          PK_PATH: "./rsa_key.p8"
+          PK_PASSPHRASE: ${{ secrets.PK_PASSPHRASE }}
         run: dbt debug
 
       # STEP 5: Download any external packages defined in your packages.yml file

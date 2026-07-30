@@ -14,8 +14,8 @@ dbt_football_snowflake:
       database: DEV_ANALYTICS
       schema: football                            # Schema name gets concatened due to the settings in the project yaml
       # Key-Pair setup
-      private_key_path: "C:/Users/thoma/Documents/PBI_GIT/football_snowflake/dbt_football_snowflake/rsa_key.p8"
-      private_key_passphrase: "snowflake"
+      private_key_path: "{{ env_var('PK_PATH') }}"
+      private_key_passphrase: "{{ env_var('PK_PASSPHRASE') }}"
 
       # Optimization settings
       threads: 1

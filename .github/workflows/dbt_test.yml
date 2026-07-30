@@ -43,15 +43,15 @@ jobs:
       # STEP 4: Test that dbt can read your profiles.yml and connect to your database
       # 'working-directory' tells GitHub to move into your subfolder before running the command
       - name: Check dbt connection
-        working-directory: ./dbt_football_databricks # Change subfolder
+        working-directory: ./dbt_football_snowflake # Change subfolder
         run: dbt debug
 
       # STEP 5: Download any external packages defined in your packages.yml file
       - name: Install dbt packages
-        working-directory: ./dbt_football_databricks # Change subfolder
+        working-directory: ./dbt_football_snowflake # Change subfolder
         run: dbt deps
 
       # STEP 6: Execute all data quality tests and schema assertions defined in your project
       - name: Run dbt tests
-        working-directory: ./dbt_football_databricks # Change subfolder
+        working-directory: ./dbt_football_snowflake # Change subfolder
         run: dbt test

@@ -3,57 +3,55 @@ name: dbt CI Pipeline
 
 # TRIGGERS: When should GitHub automatically run this script?
 on:
-    push:
-        # Option 1: Whenever code is pushed directly to the 'main' branch
-        branches: [main]
-    pull_request:
-        # Option 2: Whenever a Pull Request is opened or updated targeting 'main'
-        branches: [main]
+  push:
+    # Option 1: Whenever code is pushed directly to the 'main' branch
+    branches: [main]
+  pull_request:
+    # Option 2: Whenever a Pull Request is opened or updated targeting 'main'
+    branches: [main]
 
 jobs:
-    run-dbt:
-        # Spin up a fresh, virtual Linux server provided hosted by GitHub
-        runs-on: ubuntu-latest
+  run-dbt:
+    # Spin up a fresh, virtual Linux server provided hosted by GitHub
+    runs-on: ubuntu-latest
 
-        # ENVIRONMENT VARIABLES: Inject your repository secrets securely into this runner session
-        # dbt will read these inside your profiles.yml using env_var('DB_HOST'), etc.
-        env:
-            DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
-            DATABRICKS_HTTP_PATH: ${{ secrets.DATABRICKS_HTTP_PATH }}
-            DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
-            DBT_CATALOG: ${{ secrets.DBT_CATALOG }}
-            DBT_SCHEMA: ${{ secrets.DBT_SCHEMA }}
+    # ENVIRONMENT VARIABLES: Inject your repository secrets securely into this runner session
+    # dbt will read these inside your profiles.yml using env_var('DB_HOST'), etc.
+    env:
+      SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
+      SNOWFLAKE_USER: ${{ secrets.SNOWFLAKE_USER }}
+      SNOWFLAKE_PW: ${{ secrets.SNOWFLAKE_PW }}
 
-        steps:
-            # STEP 1: Download a copy of your repository's code onto the Linux virtual machine
-            - name: Checkout Code
-              uses: actions/checkout@v4
+    steps:
+      # STEP 1: Download a copy of your repository's code onto the Linux virtual machine
+      - name: Checkout Code
+        uses: actions/checkout@v4
 
-            # STEP 2: Download and install Python 3.10 on the virtual machine
-            - name: Set up Python
-              uses: actions/setup-python@v5
-              with:
-                  python-version: "3.10"
+      # STEP 2: Download and install Python 3.12 on the virtual machine
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
 
-            # STEP 3: Upgrade pip and install your dbt adapter
-            # (This automatically installs dbt-core in the background as a dependency)
-            - name: Install dbt
-              run: |
-                  python -m pip install --upgrade pip
-                  pip install dbt-databricks
+      # STEP 3: Upgrade pip and install your dbt adapter
+      # (This automatically installs dbt-core in the background as a dependency)
+      - name: Install dbt
+        run: |
+          python -m pip install --upgrade pip
+          pip install dbt-snowflake
 
-            # STEP 4: Test that dbt can read your profiles.yml and connect to your database
-            # 'working-directory' tells GitHub to move into your subfolder before running the command
-            - name: Check dbt connection
-              working-directory: ./dbt_football_databricks # Change subfolder
-              run: dbt debug
+      # STEP 4: Test that dbt can read your profiles.yml and connect to your database
+      # 'working-directory' tells GitHub to move into your subfolder before running the command
+      - name: Check dbt connection
+        working-directory: ./dbt_football_databricks # Change subfolder
+        run: dbt debug
 
-            # STEP 5: Download any external packages defined in your packages.yml file
-            - name: Install dbt packages
-              working-directory: ./dbt_football_databricks # Change subfolder
-              run: dbt deps
+      # STEP 5: Download any external packages defined in your packages.yml file
+      - name: Install dbt packages
+        working-directory: ./dbt_football_databricks # Change subfolder
+        run: dbt deps
 
-            # STEP 6: Execute all data quality tests and schema assertions defined in your project
-            - name: Run dbt tests
-              working-directory: ./dbt_football_databricks # Change subfolder
-              run: dbt test
+      # STEP 6: Execute all data quality tests and schema assertions defined in your project
+      - name: Run dbt tests
+        working-directory: ./dbt_football_databricks # Change subfolder
+        run: dbt test

@@ -25,17 +25,17 @@ jobs:
       RSA_KEY_CONTENTS: ${{ secrets.RSA_KEY_CONTENTS }}
 
     steps:
-      # STEP 1: Download a copy of your repository's code onto the Linux virtual machine
+      # Download a copy of your repository's code onto the Linux virtual machine
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      # STEP 2: Download and install Python 3.12 on the virtual machine
+      # Download and install Python 3.12 on the virtual machine
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
-      # STEP 3: Upgrade pip and install your dbt adapter
+      # Upgrade pip and install your dbt adapter
       # (This automatically installs dbt-core in the background as a dependency)
       - name: Install dbt
         run: |
@@ -44,10 +44,13 @@ jobs:
 
       - name: Write RSA Key to File
         run: |
-          echo "${{ secrets.RSA_KEY_CONTENTS }}" > rsa_key.p8
-          chmod 600 rsa_key.p8
+          echo "${{ secrets.RSA_KEY_CONTENTS }}" > $GITHUB_WORKSPACE/rsa_key.p8
+          chmod 600 $GITHUB_WORKSPACE/rsa_key.p8
 
-      # STEP 4: Test that dbt can read your profiles.yml and connect to your database
+          # Sanity check: confirm file exists and is not empty
+          ls -la $GITHUB_WORKSPACE/rsa_key.p8
+
+      # Test that dbt can read your profiles.yml and connect to your database
       # 'working-directory' tells GitHub to move into your subfolder before running the command
       - name: Check dbt connection
         working-directory: ./dbt_football_snowflake # Change subfolder

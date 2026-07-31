@@ -20,6 +20,7 @@ jobs:
       SNOWFLAKE_USER: ${{ secrets.SNOWFLAKE_USER }}
       RSA_KEY_CONTENTS: ${{ secrets.RSA_KEY_CONTENTS }}
       PK_PASSPHRASE: ${{ secrets.PK_PASSPHRASE }}
+      PK_PATH: "./rsa_key.p8" # Define variable here, we will write to it in a later step
 
     # Set default execution directory to the dbt project folder for all run steps
     defaults:
@@ -54,9 +55,6 @@ jobs:
       # Verify database connection credentials and profile configuration
       # Explicitly pass PK_PATH pointing to the generated file and force dbt to use the local profile folder
       - name: Check dbt connection
-        env:
-          PK_PATH: "./rsa_key.p8"
-          PK_PASSPHRASE: ${{ secrets.PK_PASSPHRASE }}
         run: dbt debug --profiles-dir .
 
       # Download and resolve external package dependencies defined in packages.yml

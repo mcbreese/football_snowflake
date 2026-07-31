@@ -1,19 +1,21 @@
 dbt_football_snowflake:
-  target: dev # This is a key within a profile that specifies the default target. A target represents a specific environment, like dev or prod. When you run a dbt command, it will use the connection details for this target unless you specify a different one with the -target flag.
+  target: dev
   outputs:
     dev:
       type: snowflake 
       # Connection Credentials
       account: "{{ env_var('SNOWFLAKE_ACCOUNT') }}"
       user: "{{ env_var('SNOWFLAKE_USER') }}"
-      password: "{{ env_var('SNOWFLAKE_PW') }}"
+
       # Role & Compute Resources
       role: DATA_ENGINEER
-      warehouse: DEV_TRANSFORM_WH                      # Or whatever your active warehouse is named
+      warehouse: DEV_TRANSFORM_WH
+      
       # Target Landing Database for Dev
       database: DEV_ANALYTICS
-      schema: football                            # Schema name gets concatened due to the settings in the project yaml
-      # Key-Pair setup
+      schema: football
+
+      # Key-Pair setup (No password needed)
       private_key_path: "{{ env_var('PK_PATH') }}"
       private_key_passphrase: "{{ env_var('PK_PASSPHRASE') }}"
 

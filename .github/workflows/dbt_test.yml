@@ -1,69 +1,68 @@
 # The name of the pipeline as it appears in the GitHub Actions dashboard
 name: dbt CI Pipeline
 
-# TRIGGERS: When should GitHub automatically run this script?
+# Trigger the pipeline on pushes or pull requests targeting the main branch
 on:
   push:
-    # Option 1: Whenever code is pushed directly to the 'main' branch
     branches: [main]
   pull_request:
-    # Option 2: Whenever a Pull Request is opened or updated targeting 'main'
     branches: [main]
 
 jobs:
   run-dbt:
-    # Spin up a fresh, virtual Linux server provided hosted by GitHub
+    # Run the workflow on a fresh GitHub-hosted Ubuntu runner
     runs-on: ubuntu-latest
 
-    # ENVIRONMENT VARIABLES: Inject your repository secrets securely into this runner session
-    # dbt will read these inside your profiles.yml using env_var('DB_HOST'), etc.
+    # Global environment variables accessible across steps
+    # Note: Sensitive values are pulled directly from GitHub Repository Secrets
     env:
       SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
       SNOWFLAKE_USER: ${{ secrets.SNOWFLAKE_USER }}
-      SNOWFLAKE_PW: ${{ secrets.SNOWFLAKE_PW }}
-      PK_PASSPHRASE: ${{ secrets.PK_PASSPHRASE }}
       RSA_KEY_CONTENTS: ${{ secrets.RSA_KEY_CONTENTS }}
+      PK_PASSPHRASE: ${{ secrets.PK_PASSPHRASE }}
+
+    # Set default execution directory to the dbt project folder for all run steps
+    defaults:
+      run:
+        working-directory: ./dbt_football_snowflake
 
     steps:
-      # Download a copy of your repository's code onto the Linux virtual machine
+      # Checkout the repository source code onto the runner
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      # Download and install Python 3.12 on the virtual machine
+      # Set up Python environment required for running dbt
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
-      # Upgrade pip and install your dbt adapter
-      # (This automatically installs dbt-core in the background as a dependency)
+      # Install dbt core and the Snowflake adapter
       - name: Install dbt
         run: |
           python -m pip install --upgrade pip
           pip install dbt-snowflake
 
+      # Materialise the RSA private key from secrets into a temporary file on the runner
+      # Restrict file permissions using chmod 600 for security
       - name: Write RSA Key to File
-        working-directory: ./dbt_football_snowflake # Change subfolder
         run: |
           echo "${{ secrets.RSA_KEY_CONTENTS }}" > rsa_key.p8
           chmod 600 rsa_key.p8
-          ls -la rsa_key.p8  # Quick sanity check print
+          ls -la rsa_key.p8
 
-      # Test that dbt can read your profiles.yml and connect to your database
-      # 'working-directory' tells GitHub to move into your subfolder before running the command
+      # Verify database connection credentials and profile configuration
+      # Explicitly pass PK_PATH pointing to the generated file and force dbt to use the local profile folder
       - name: Check dbt connection
-        working-directory: ./dbt_football_snowflake # Change subfolder
         env:
-          PK_PATH: "./rsa_key.p8" # This is what is listed in profiles.yml
+          PK_PATH: "./rsa_key.p8"
           PK_PASSPHRASE: ${{ secrets.PK_PASSPHRASE }}
-        run: dbt debug
+        run: dbt debug --profiles-dir .
 
-      # STEP 5: Download any external packages defined in your packages.yml file
+      # Download and resolve external package dependencies defined in packages.yml
       - name: Install dbt packages
-        working-directory: ./dbt_football_snowflake # Change subfolder
-        run: dbt deps
+        run: dbt deps --profiles-dir .
 
-      # STEP 6: Execute all data quality tests and schema assertions defined in your project
+      # Execute data assertions, schema tests, and model validations
       - name: Run dbt tests
-        working-directory: ./dbt_football_snowflake # Change subfolder
-        run: dbt test
+        run: dbt test --profiles-dir .

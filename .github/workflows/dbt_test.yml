@@ -21,7 +21,6 @@ jobs:
       SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
       SNOWFLAKE_USER: ${{ secrets.SNOWFLAKE_USER }}
       SNOWFLAKE_PW: ${{ secrets.SNOWFLAKE_PW }}
-      PK_PATH: ${{ secrets.PK_PATH }}
       PK_PASSPHRASE: ${{ secrets.PK_PASSPHRASE }}
       RSA_KEY_CONTENTS: ${{ secrets.RSA_KEY_CONTENTS }}
 

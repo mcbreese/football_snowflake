@@ -43,19 +43,18 @@ jobs:
           pip install dbt-snowflake
 
       - name: Write RSA Key to File
+        working-directory: ./dbt_football_snowflake # Change subfolder
         run: |
-          echo "${{ secrets.RSA_KEY_CONTENTS }}" > $GITHUB_WORKSPACE/rsa_key.p8
-          chmod 600 $GITHUB_WORKSPACE/rsa_key.p8
-
-          # Sanity check: confirm file exists and is not empty
-          ls -la $GITHUB_WORKSPACE/rsa_key.p8
+          echo "${{ secrets.RSA_KEY_CONTENTS }}" > rsa_key.p8
+          chmod 600 rsa_key.p8
+          ls -la rsa_key.p8  # Quick sanity check print
 
       # Test that dbt can read your profiles.yml and connect to your database
       # 'working-directory' tells GitHub to move into your subfolder before running the command
       - name: Check dbt connection
         working-directory: ./dbt_football_snowflake # Change subfolder
         env:
-          PK_PATH: "./rsa_key.p8"
+          PK_PATH: "./rsa_key.p8" # This is what is listed in profiles.yml
           PK_PASSPHRASE: ${{ secrets.PK_PASSPHRASE }}
         run: dbt debug
 

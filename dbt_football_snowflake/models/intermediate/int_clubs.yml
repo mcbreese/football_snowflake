@@ -1,0 +1,65 @@
+version: 2
+
+models:
+  - name: int_clubs
+    meta:
+      owner: "Data Engineering"
+    config:
+      contract:
+        enforced: true
+    description: "{{ doc('int_clubs_model_description') }}"
+    columns:
+      - name: club_id
+        description: "{{ doc('club_id') }}"
+        data_type: INT
+        tests:
+          - not_null
+          - unique
+      - name: domestic_competition_id
+        description: "{{ doc('domestic_competition_id') }}"
+        data_type: STRING
+      - name: name
+        description: "{{ doc('name') }}"
+        data_type: STRING
+      - name: total_market_value
+        description: "{{ doc('total_market_value') }}"
+        data_type: STRING
+      - name: squad_size
+        description: "{{ doc('squad_size') }}"
+        data_type: INT
+      - name: average_age
+        description: "{{ doc('average_age') }}"
+        data_type: NUMBER
+      - name: foreigners_number
+        description: "{{ doc('foreigners_number') }}"
+        data_type: INT
+      - name: foreigners_percentage
+        description: "{{ doc('foreigners_percentage') }}"
+        data_type: NUMBER
+      - name: national_team_players
+        description: "{{ doc('national_team_players') }}"
+        data_type: INT
+      - name: stadium_name
+        description: "{{ doc('stadium_name') }}"
+        data_type: STRING
+      - name: stadium_seats
+        description: "{{ doc('stadium_seats') }}"
+        data_type: INT
+      - name: net_transfer_record
+        description: "{{ doc('net_transfer_record') }}"
+        data_type: STRING
+      - name: coach_name
+        description: "{{ doc('coach_name') }}"
+        data_type: STRING
+      - name: last_season
+        description: "{{ doc('last_season') }}"
+        data_type: INT
+      - name: loaded_timestamp
+        description: "{{ doc('loaded_timestamp') }}"
+        data_type: TIMESTAMP
+      - name: source_file
+        description: "{{ doc('source_file') }}"
+        data_type: STRING
+      - name: url
+        description: "{{ doc('url') }}"
+        data_type: STRING

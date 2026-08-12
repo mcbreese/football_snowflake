@@ -2,5 +2,22 @@
     materialized='view'
 ) }}
 
-SELECT *
+SELECT
+    cl.club_id,
+    cl.domestic_competition_id,
+    cl.name,
+    cl.total_market_value,
+    cl.squad_size,
+    cl.average_age,
+    cl.foreigners_number,
+    cl.foreigners_percentage,
+    cl.national_team_players,
+    cl.stadium_name,
+    cl.stadium_seats,
+    cl.net_transfer_record,
+    cl.coach_name,
+    cl.last_season,
+    cl.loaded_timestamp,
+    cl.source_file,
+    cl.url
 FROM {{ ref('stg_clubs') }} AS cl

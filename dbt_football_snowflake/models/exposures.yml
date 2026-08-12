@@ -7,12 +7,12 @@ exposures:
   - name: player_analysis_dashboard
     label: Player Career & Performance Dashboard
     type: dashboard
-    maturity: high
-    # Define the tool used to consume the data
-    url: 'https://google.co.uk' # example will change 
+    maturity: low
+    # TODO: replace once the dashboard is actually built
+    url: 'https://example.com/TODO-dashboard-not-yet-built'
     description: |
-      This Databricks SQL Dashboard provides key metrics and visualisations for scouting and tactical analysis. 
-      It allows analysts to compare player performance (Goals, Assists, Minutes) across different seasons and competitions, 
+      Planned BI dashboard providing key metrics and visualisations for scouting and tactical analysis.
+      It will allow analysts to compare player performance (Goals, Assists, Minutes) across different seasons and competitions,
       and trace the financial impact of their transfer history.
 
     owner:

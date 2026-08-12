@@ -8,6 +8,10 @@ version: '1.0.0'
 # This setting configures which "profile" dbt uses for this project.
 profile: 'dbt_football_snowflake'
 
+# Keeps local/CI/future-contributor environments from silently drifting onto an
+# untested dbt-core version. Matches the pin in pyproject.toml / CI.
+require-dbt-version: [">=1.12.0", "<2.0.0"]
+
 # These configurations specify where dbt should look for different types of files.
 # The `model-paths` config, for example, states that models in this project can be
 # found in the "models/" directory. You probably won't need to change these!

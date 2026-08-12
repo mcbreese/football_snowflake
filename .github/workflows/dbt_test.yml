@@ -38,11 +38,11 @@ jobs:
         with:
           python-version: "3.12"
 
-      # Install dbt core and the Snowflake adapter
+      # Install dbt core and the Snowflake adapter, pinned to match pyproject.toml
       - name: Install dbt
         run: |
           python -m pip install --upgrade pip
-          pip install dbt-snowflake
+          pip install "dbt-core==1.12.*" "dbt-snowflake==1.12.*"
 
       # Materialise the RSA private key from secrets into a temporary file on the runner
       # Restrict file permissions using chmod 600 for security
@@ -61,6 +61,8 @@ jobs:
       - name: Install dbt packages
         run: dbt deps --profiles-dir .
 
-      # Execute data assertions, schema tests, and model validations
-      - name: Run dbt tests
-        run: dbt test --profiles-dir .
+      # Build all models fresh, then run data assertions, schema tests, and model
+      # validations against that build (not whatever happened to already be in the
+      # target schema) so a PR failing to build also fails CI.
+      - name: Run dbt build
+        run: dbt build --profiles-dir .

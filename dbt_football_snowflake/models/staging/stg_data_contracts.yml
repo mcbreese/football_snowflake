@@ -91,10 +91,7 @@ models:
       - name: club_id
         description: "{{ doc('club_id') }}"
         data_type: INT
-        tests:
-          - relationships:
-              to: ref('stg_clubs')
-              field: club_id
+        tests: *pk_tests_anchor
       - name: domestic_competition_id
         description: "{{ doc('domestic_competition_id') }}"
         data_type: STRING
@@ -158,10 +155,7 @@ models:
       - name: competition_id
         description: "{{ doc('competition_id') }}"
         data_type: STRING
-        tests:
-          - relationships:
-              to: ref('stg_competitions')
-              field: competition_id
+        tests: *pk_tests_anchor
       - name: country_id
         description: "{{ doc('country_id') }}"
         data_type: INT
@@ -210,11 +204,7 @@ models:
       - name: game_id
         description: "{{ doc('game_id') }}"
         data_type: INT
-        tests:
-          - not_null
-          - relationships:
-              to: ref('stg_games')
-              field: game_id
+        tests: *pk_tests_anchor
       - name: competition_id
         description: "{{ doc('competition_id') }}"
         data_type: STRING
@@ -309,11 +299,7 @@ models:
       - name: player_id
         description: "{{ doc('player_id') }}"
         data_type: INT
-        tests:
-          - not_null
-          - relationships:
-              to: ref('stg_players')
-              field: player_id
+        tests: *pk_tests_anchor
       - name: current_club_id
         description: "{{ doc('current_club_id') }}"
         data_type: INT

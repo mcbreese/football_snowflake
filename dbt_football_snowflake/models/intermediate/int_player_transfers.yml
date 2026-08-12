@@ -1,0 +1,77 @@
+version: 2
+
+models:
+  - name: int_player_transfers
+    meta:
+      owner: "Data Engineering"
+    config:
+      contract:
+        enforced: true
+    description: "{{ doc('int_player_transfers_model_description') }}"
+    columns:
+      - name: player_transfer_sk
+        description: "{{ doc('player_transfer_sk') }}"
+        data_type: STRING
+        tests:
+          - not_null
+          - unique
+      - name: from_club_name
+        description: "{{ doc('from_club_name') }}"
+        data_type: STRING
+      - name: to_club_name
+        description: "{{ doc('to_club_name') }}"
+        data_type: STRING
+      - name: transfer_date
+        description: "{{ doc('transfer_date') }}"
+        data_type: DATE
+      - name: transfer_season
+        description: "{{ doc('transfer_season') }}"
+        data_type: STRING
+      - name: transfer_fee
+        description: "{{ doc('transfer_fee') }}"
+        data_type: NUMBER
+      - name: market_value_in_eur
+        description: "{{ doc('market_value_in_eur') }}"
+        data_type: NUMBER
+      - name: player_name
+        description: "{{ doc('player_name') }}"
+        data_type: STRING
+      - name: nationality
+        description: "{{ doc('nationality') }}"
+        data_type: STRING
+      - name: position
+        description: "{{ doc('position') }}"
+        data_type: STRING
+      - name: sub_position
+        description: "{{ doc('sub_position') }}"
+        data_type: STRING
+      - name: foot
+        description: "{{ doc('foot') }}"
+        data_type: STRING
+      - name: height_in_cm
+        description: "{{ doc('height_in_cm') }}"
+        data_type: INT
+      - name: date_of_birth
+        description: "{{ doc('date_of_birth') }}"
+        data_type: DATE
+      - name: age_in_years
+        description: "{{ doc('age_in_years') }}"
+        data_type: DECIMAL(18,8)
+      - name: last_season
+        description: "{{ doc('last_season') }}"
+        data_type: INT
+      - name: player_id
+        description: "{{ doc('player_id') }}"
+        data_type: INT
+      - name: from_club_id
+        description: "{{ doc('from_club_id') }}"
+        data_type: INT
+      - name: to_club_id
+        description: "{{ doc('to_club_id') }}"
+        data_type: INT
+      - name: transfer_loaded_timestamp
+        description: "{{ doc('loaded_timestamp') }}"
+        data_type: TIMESTAMP
+      - name: transfer_source_file
+        description: "{{ doc('transfer_source_file') }}"
+        data_type: STRING

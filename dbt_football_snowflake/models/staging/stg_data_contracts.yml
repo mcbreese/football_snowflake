@@ -106,13 +106,13 @@ models:
         data_type: INT
       - name: average_age
         description: "{{ doc('average_age') }}"
-        data_type: number
+        data_type: NUMBER
       - name: foreigners_number
         description: "{{ doc('foreigners_number') }}"
         data_type: INT
       - name: foreigners_percentage
         description: "{{ doc('foreigners_percentage') }}"
-        data_type: number
+        data_type: NUMBER
       - name: national_team_players
         description: "{{ doc('national_team_players') }}"
         data_type: INT
@@ -375,10 +375,10 @@ models:
         data_type: STRING
       - name: transfer_fee
         description: "{{ doc('transfer_fee') }}"
-        data_type: number
+        data_type: NUMBER
       - name: market_value_in_eur
         description: "{{ doc('market_value_in_eur') }}"
-        data_type: number
+        data_type: NUMBER
       - name: loaded_timestamp
         description: "{{ doc('loaded_timestamp') }}"
         data_type: TIMESTAMP

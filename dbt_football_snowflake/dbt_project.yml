@@ -41,9 +41,7 @@ models:
     +persist_docs: # Configuration for pushing dbt documentation to the database
       relation: true # Push the model's description (relation) as a comment on the table/view
       columns: true # Push column descriptions as comments on the respective columns
-    #contracts: # Configuration block for Data Contracts (enforcing structure)
-       #enabled: true # Enable data contract enforcement for these models
-    
+
     staging:
       +enabled: true
       +tags: ["bronze", "staging"] # all staging should be tagged with minimum ["bronze", "staging"]

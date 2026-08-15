@@ -2,7 +2,8 @@ version: 2
 
 sources:
   - name: football_raw # The single logical source name for all raw data
-    tags: ["raw", "source"] # Tags for easy selection/exclusion
+    config:
+      tags: ["raw", "source"] # Tags for easy selection/exclusion
     description: "The raw, untransformed football data ingested into Snowflake."
     database: dev_raw
     schema: public # The schema where the raw tables reside
@@ -10,10 +11,11 @@ sources:
     tables:
       - name: raw_appearances
         description: "One record per player appearance in a game."
-        loaded_at_field: loaded_timestamp
-        freshness:
-          warn_after: {count: 28, period: day}
-          #error_after: {count: 12, period: hour}
+        config:
+          loaded_at_field: loaded_timestamp
+          freshness:
+            warn_after: {count: 28, period: day}
+            #error_after: {count: 12, period: hour}
         columns:
           - name: appearance_id # pk
             tests:
@@ -22,9 +24,10 @@ sources:
               
       - name: raw_games
         description: "One record per match played."
-        loaded_at_field: loaded_timestamp
-        freshness:
-          warn_after: {count: 28, period: day}
+        config:
+          loaded_at_field: loaded_timestamp
+          freshness:
+            warn_after: {count: 28, period: day}
         columns:
           - name: game_id
             tests:
@@ -34,9 +37,10 @@ sources:
       # --- Master/Dimension Data (Check Freshness Less Frequently) ---
       - name: raw_players
         description: "Master list of player biographical data."
-        loaded_at_field: loaded_timestamp
-        freshness:
-          warn_after: {count: 28, period: day}
+        config:
+          loaded_at_field: loaded_timestamp
+          freshness:
+            warn_after: {count: 28, period: day}
         columns:
           - name: player_id # pk
             tests:
@@ -62,9 +66,10 @@ sources:
       # --- Transactional/Valuation Data ---
       - name: raw_transfers
         description: "Records of player transfers between clubs."
-        loaded_at_field: loaded_timestamp
-        freshness:
-          warn_after: {count: 28, period: day}
+        config:
+          loaded_at_field: loaded_timestamp
+          freshness:
+            warn_after: {count: 28, period: day}
         columns: # there is no PK in raw data
           - name: player_id # Test FK integrity at the source
             tests:
@@ -72,9 +77,10 @@ sources:
 
       - name: raw_player_valuations
         description: "Historical market value data for players."
-        loaded_at_field: loaded_timestamp
-        freshness:
-          warn_after: {count: 28, period: day}
+        config:
+          loaded_at_field: loaded_timestamp
+          freshness:
+            warn_after: {count: 28, period: day}
         columns:
           - name: player_id
             tests:

@@ -15,6 +15,12 @@ models:
           enforced: true # Ensure schema integrity for the Gold Layer
     description: "{{ doc('fct_performance_model_description') }}"
     columns:
+      - name: player_performance_sk
+        description: "{{ doc('player_performance_sk') }}"
+        data_type: STRING
+        tests:
+          - not_null
+          - unique
       - name: player_id
         description: "{{ doc('player_id') }}" # Inherited from Staging Docs
         data_type: INT
@@ -87,6 +93,12 @@ models:
     <<: *fct_meta_anchor # Reuse the same metadata anchor
     description: "{{ doc('fct_transfers_model_description') }}"
     columns:
+      - name: player_transfer_sk
+        description: "{{ doc('player_transfer_sk') }}"
+        data_type: STRING
+        tests:
+          - not_null
+          - unique
       - name: player_id
         description: "{{ doc('player_id') }}" # Inherited from Staging Docs
         data_type: INT

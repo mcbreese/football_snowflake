@@ -20,8 +20,8 @@ A dimension table containing player demographics and biographic details, such as
 ***
 ## Dimension Column Definitions
 
-{% docs club_id_pk %}
-**Primary Key (PK).** The unique identifier for the club.
+{% docs club_sk_pk %}
+**Surrogate Key (PK).** A unique key for the club record, allowing for future historical tracking.
 {% enddocs %}
 
 {% docs club_name %}

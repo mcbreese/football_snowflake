@@ -2,6 +2,8 @@
 {{ materialization_config() }}
 
 SELECT
+    -- Primary Key (grain: player_id, club_id, season, competition_name)
+    {{ dbt_utils.generate_surrogate_key(['pl.player_id', 'pl.club_id', 'pl.season', 'pl.competition_name']) }} AS player_performance_sk,
     -- Dimensions to Group By
     pl.player_id,
     pl.club_id,

@@ -1,0 +1,92 @@
+version: 2
+
+models:
+  - name: int_player_appearances
+    meta:
+      owner: "Data Engineering"
+    config:
+      contract:
+        enforced: true
+    description: "{{ doc('int_player_appearances_model_description') }}"
+    columns:
+      - name: player_appearance_sk
+        description: "{{ doc('player_appearance_sk') }}"
+        data_type: STRING
+        tests:
+          - not_null
+          - unique
+      - name: player_name
+        description: "{{ doc('player_name') }}"
+        data_type: STRING
+      - name: club_name
+        description: "{{ doc('club_name') }}"
+        data_type: STRING
+      - name: date_of_birth
+        description: "{{ doc('date_of_birth') }}"
+        data_type: DATE
+      - name: appearance_date
+        description: "{{ doc('appearance_date') }}"
+        data_type: DATE
+      - name: appearance_age_in_years
+        description: "{{ doc('appearance_age_in_years') }}"
+        data_type: INT
+      - name: season
+        description: "{{ doc('season') }}"
+        data_type: INT
+      - name: yellow_cards
+        description: "{{ doc('yellow_cards') }}"
+        data_type: INT
+      - name: red_cards
+        description: "{{ doc('red_cards') }}"
+        data_type: INT
+      - name: goals
+        description: "{{ doc('goals') }}"
+        data_type: INT
+      - name: assists
+        description: "{{ doc('assists') }}"
+        data_type: INT
+      - name: minutes_played
+        description: "{{ doc('minutes_played') }}"
+        data_type: INT
+      - name: home_club_goals
+        description: "{{ doc('home_club_goals') }}"
+        data_type: INT
+      - name: away_club_goals
+        description: "{{ doc('away_club_goals') }}"
+        data_type: INT
+      - name: home_away
+        description: "{{ doc('home_away') }}"
+        data_type: STRING
+      - name: outcome
+        description: "{{ doc('outcome') }}"
+        data_type: STRING
+      - name: player_win_loss
+        description: "{{ doc('player_win_loss') }}"
+        data_type: STRING
+      - name: competition_name
+        description: "{{ doc('competition_name') }}"
+        data_type: STRING
+      - name: competition_type
+        description: "{{ doc('competition_type') }}"
+        data_type: STRING
+      - name: player_id
+        description: "{{ doc('player_id') }}"
+        data_type: INT
+      - name: club_id
+        description: "{{ doc('club_id') }}"
+        data_type: INT
+      - name: game_id
+        description: "{{ doc('game_id') }}"
+        data_type: INT
+      - name: appearance_id
+        description: "{{ doc('appearance_id') }}"
+        data_type: STRING
+      - name: home_club_id
+        description: "{{ doc('home_club_id') }}"
+        data_type: INT
+      - name: away_club_id
+        description: "{{ doc('away_club_id') }}"
+        data_type: INT
+      - name: appearance_loaded_timestamp
+        description: "{{ doc('loaded_timestamp') }}"
+        data_type: TIMESTAMP

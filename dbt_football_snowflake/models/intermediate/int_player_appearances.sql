@@ -9,7 +9,7 @@ WITH player_appearances AS (
         pl.date_of_birth,
         ap.appearance_date,
         -- facts
-        DATEDIFF(YEAR,ap.appearance_date, pl.date_of_birth) AS appearance_age_in_years,
+        DATEDIFF(YEAR, pl.date_of_birth, ap.appearance_date) AS appearance_age_in_years,
         gm.season,
         ap.yellow_cards,
         ap.red_cards,

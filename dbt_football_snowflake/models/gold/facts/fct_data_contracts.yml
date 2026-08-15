@@ -118,6 +118,15 @@ models:
         description: "{{ doc('to_club_id') }}" # New block
         data_type: INT
         # removed ref to club_id due to data issue with dim
+      - name: transfer_date_key
+        description: "{{ doc('date_key') }}"
+        data_type: INT
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_transfer_date')
+                field: date_key
       - name: transfer_date
         description: "{{ doc('transfer_date') }}" # Inherited from Staging Docs
         data_type: DATE

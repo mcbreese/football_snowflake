@@ -10,6 +10,7 @@ SELECT
     tr.player_id,
     tr.from_club_id,
     tr.to_club_id,
+    CAST(TO_CHAR(tr.transfer_date, 'yyyyMMdd') AS INT) AS transfer_date_key,
 
     -- Facts / Measures
     tr.transfer_fee,

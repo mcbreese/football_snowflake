@@ -1,6 +1,3 @@
--- Refer to macro in macros folder
-{{ materialization_config() }}
-
 SELECT
 
     -- Primary Key

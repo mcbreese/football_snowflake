@@ -1,6 +1,3 @@
--- Refer to macro in macros folder
-{{ materialization_config() }}
-
 SELECT player_sk
     , player_id
     , player_name

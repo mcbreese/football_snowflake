@@ -1,7 +1,3 @@
-{{ config(
-    materialized='view'
-) }}
-
 WITH player_appearances AS (
     SELECT ap.appearance_player_sk,
         pl.player_name,

@@ -1,5 +1,3 @@
--- Refer to macro in macros folder
-{{ materialization_config() }}
 -- Set your date range here. Start must cover the earliest real transfer_date
 -- in the source data (currently 1993-07-01) with margin for future loads.
 WITH date_range AS (

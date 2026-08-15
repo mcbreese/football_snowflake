@@ -1,7 +1,3 @@
-{{ config(
-    materialized='view'
-) }}
-
 WITH transfers AS (
 
     SELECT

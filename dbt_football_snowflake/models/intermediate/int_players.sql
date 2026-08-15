@@ -1,7 +1,3 @@
-{{ config(
-    materialized='view'
-) }}
-
 SELECT
     pl.player_sk,
     pl.player_id,

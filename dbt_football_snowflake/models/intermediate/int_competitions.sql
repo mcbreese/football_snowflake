@@ -1,7 +1,3 @@
-{{ config(
-    materialized='view'
-) }}
-
 SELECT
     co.competition_sk,
     co.competition_id,

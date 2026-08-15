@@ -88,6 +88,10 @@ models:
     <<: *stg_meta_anchor # Use Metadata Anchor
     description: "{{ doc('stg_clubs_model_description') }}"
     columns:
+      - name: club_sk
+        description: "{{ doc('club_sk') }}"
+        data_type: STRING
+        tests: *pk_tests_anchor
       - name: club_id
         description: "{{ doc('club_id') }}"
         data_type: INT

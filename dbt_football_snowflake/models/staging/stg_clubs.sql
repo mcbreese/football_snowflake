@@ -5,7 +5,8 @@ AS (
 
 clubs as (
     -- primary Key
-    SELECT club_id
+    SELECT {{ dbt_utils.generate_surrogate_key(['club_id']) }} AS club_sk -- create surrogate key
+        , club_id
     -- foreign Keys
         , domestic_competition_id
     --  dimensions

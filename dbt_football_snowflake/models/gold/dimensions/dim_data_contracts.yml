@@ -15,10 +15,16 @@ models:
           enforced: true
     description: "{{ doc('dim_clubs_model_description') }}"
     columns:
-      - name: club_id
-        description: "{{ doc('club_id_pk') }}"
-        data_type: INT
+      - name: club_sk
+        description: "{{ doc('club_sk_pk') }}"
+        data_type: STRING
         tests: &dim_pk_tests_anchor
+          - not_null
+          - unique
+      - name: club_id
+        description: "{{ doc('club_id') }}"
+        data_type: INT
+        tests:
           - not_null
           - unique
       - name: name

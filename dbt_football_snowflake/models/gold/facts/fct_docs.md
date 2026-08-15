@@ -18,6 +18,10 @@ A complete historical record of every player transfer event and the associated f
 
 ## Column Definitions (Derived Metrics & Aggregates)
 
+{% docs player_performance_sk %}
+**Surrogate Key (PK).** Generated via `dbt_utils.generate_surrogate_key(['player_id', 'club_id', 'season', 'competition_name'])`, uniquely identifying one row at this model's grain (one player, one club, one season, one competition).
+{% enddocs %}
+
 {% docs competition_name_fct %}
 The human-readable name of the competition (e.g., "Premier League"), denormalised from the `dim_competitions` table for ease of reporting.
 {% enddocs %}

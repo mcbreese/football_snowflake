@@ -3,6 +3,7 @@
 ) }}
 
 SELECT
+    cl.club_sk,
     cl.club_id,
     cl.domestic_competition_id,
     cl.name,

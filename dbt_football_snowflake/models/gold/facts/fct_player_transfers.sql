@@ -3,6 +3,9 @@
 
 SELECT
 
+    -- Primary Key
+    tr.player_transfer_sk,
+
     -- Foreign Keys (To join to future dimension tables)
     tr.player_id,
     tr.from_club_id,

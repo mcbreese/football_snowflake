@@ -17,7 +17,7 @@ A dimension table containing player demographics and biographic details, such as
 {% enddocs %}
 
 {% docs dim_transfer_date_model_description %}
-A date spine dimension covering 2000-01-01 through 2030-12-31, one row per calendar day, used to join fact tables to a `date_key` for calendar-based reporting (e.g. by transfer season).
+A date spine dimension covering 1990-01-01 through 2030-12-31, one row per calendar day, used to join fact tables to a `date_key` for calendar-based reporting (e.g. by transfer season).
 {% enddocs %}
 
 

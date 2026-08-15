@@ -1,10 +1,11 @@
 -- Refer to macro in macros folder
 {{ materialization_config() }}
--- Set your date range here (e.g., from Jan 1, 2000, to Dec 31, 2030)
+-- Set your date range here. Start must cover the earliest real transfer_date
+-- in the source data (currently 1993-07-01) with margin for future loads.
 WITH date_range AS (
     {{ dbt_utils.date_spine(
         datepart="day",
-        start_date="cast('2000-01-01' as date)",
+        start_date="cast('1990-01-01' as date)",
         end_date="cast('2030-12-31' as date)"
     ) }}
 ),

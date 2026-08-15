@@ -4,14 +4,6 @@ with source as (
 
 ),
 
--- Got a lot of missing clubs in my fct data - use an exists as skipping dq issue for personal project
-clubs AS (
-
-    SELECT *
-    FROM {{source('football_raw', 'raw_clubs')}}
-
-),
-
 games as (
 
     select
@@ -37,10 +29,9 @@ games as (
         source_file
 
     from source gm
-    WHERE EXISTS (SELECT * FROM clubs AS cl
-            WHERE cl.club_id = gm.home_club_id)
-    AND EXISTS (SELECT * FROM clubs AS cl
-            WHERE cl.club_id = gm.away_club_id)
+    -- Got a lot of missing clubs in my fct data - use an exists as skipping dq issue for personal project
+    WHERE {{ exists_in_raw_clubs('gm.home_club_id') }}
+    AND {{ exists_in_raw_clubs('gm.away_club_id') }}
 
 )
 

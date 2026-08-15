@@ -3,14 +3,6 @@ AS (
 	select * from {{ source('football_raw', 'raw_appearances') }}
 	),
 
--- Got a lot of missing clubs in my fct data - use an exists as skipping dq issue for personal project
-clubs AS (
-
-    SELECT *
-    FROM {{source('football_raw', 'raw_clubs')}}
-
-),
-
 players AS (
 
 	SELECT  *
@@ -45,7 +37,8 @@ AS (
 		,loaded_timestamp
 		,source_file
 	FROM source ap
-	    WHERE EXISTS (SELECT * FROM clubs AS cl WHERE cl.club_id = IFNULL(ap.player_club_id,0))
+	    -- Got a lot of missing clubs in my fct data - use an exists as skipping dq issue for personal project
+	    WHERE {{ exists_in_raw_clubs('IFNULL(ap.player_club_id,0)') }}
 		AND EXISTS (SELECT * FROM players pl WHERE ap.player_id = pl.player_id)
 	)
 SELECT *

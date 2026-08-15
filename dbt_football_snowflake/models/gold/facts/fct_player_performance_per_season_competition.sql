@@ -34,8 +34,5 @@ GROUP BY pl.player_id
     , pl.club_id
     , pl.season
     , pl.competition_name
-    , pl.club_name
-    , pl.competition_type
-    , pl.date_of_birth
 -- Ensure we don't divide by zero for goals per 90 mins
 HAVING SUM(pl.minutes_played) > 0

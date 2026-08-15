@@ -2,9 +2,9 @@ version: 2
 
 models:
   - name: int_player_appearances
-    meta:
-      owner: "Data Engineering"
     config:
+      meta:
+        owner: "Data Engineering"
       contract:
         enforced: true
     description: "{{ doc('int_player_appearances_model_description') }}"

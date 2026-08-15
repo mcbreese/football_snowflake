@@ -2,9 +2,9 @@ version: 2
 
 models:
   - name: int_competitions
-    meta:
-      owner: "Data Engineering"
     config:
+      meta:
+        owner: "Data Engineering"
       contract:
         enforced: true
     description: "{{ doc('int_competitions_model_description') }}"

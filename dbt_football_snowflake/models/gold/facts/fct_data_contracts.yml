@@ -6,10 +6,10 @@ models:
   # --------------------------------------------------------------------------------------
   - name: fct_player_performance_per_season_competition
     <<: &fct_meta_anchor
-      meta:
-        owner: "Analytics / Data Science"
-        usage: "Primary Mart for Player Scouting and Trend Analysis"
       config:
+        meta:
+          owner: "Analytics / Data Science"
+          usage: "Primary Mart for Player Scouting and Trend Analysis"
         materialized: table
         contract:
           enforced: true # Ensure schema integrity for the Gold Layer
@@ -27,16 +27,18 @@ models:
         tests:
           - not_null
           - relationships:
-              to: ref('dim_players')
-              field: player_id
+              arguments:
+                to: ref('dim_players')
+                field: player_id
       - name: club_id
         description: "{{ doc('club_id') }}" # Inherited from Staging Docs
         data_type: INT
         tests:
           - not_null
           - relationships:
-              to: ref('dim_clubs')
-              field: club_id
+              arguments:
+                to: ref('dim_clubs')
+                field: club_id
       - name: season
         description: "{{ doc('season') }}" # Inherited from Staging Docs
         data_type: INT
@@ -105,8 +107,9 @@ models:
         tests:
           - not_null
           - relationships:
-              to: ref('dim_players')
-              field: player_id
+              arguments:
+                to: ref('dim_players')
+                field: player_id
       - name: from_club_id
         description: "{{ doc('from_club_id') }}" # New block
         data_type: INT

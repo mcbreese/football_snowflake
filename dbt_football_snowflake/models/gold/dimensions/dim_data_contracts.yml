@@ -6,10 +6,10 @@ models:
   # --------------------------------------------------------------------------------------
   - name: dim_clubs
     <<: &dim_meta_anchor
-      meta:
-        owner: "Analytics Department"
-        usage: "Club reference table for joining to facts"
       config:
+        meta:
+          owner: "Analytics Department"
+          usage: "Club reference table for joining to facts"
         materialized: table
         contract:
           enforced: true

@@ -2,9 +2,11 @@
 {{ materialization_config() }}
 -- Set your date range here (e.g., from Jan 1, 2000, to Dec 31, 2030)
 WITH date_range AS (
-    SELECT DATEADD('day', SEQ4(), DATE '2000-01-01') AS DATE_DAY
-    FROM TABLE(GENERATOR(ROWCOUNT => 11323)) -- 11,323 days between 2000-01-01 and 2030-12-31
-    WHERE DATEADD('day', SEQ4(), DATE '2000-01-01') <= DATE '2030-12-31'
+    {{ dbt_utils.date_spine(
+        datepart="day",
+        start_date="cast('2000-01-01' as date)",
+        end_date="cast('2030-12-31' as date)"
+    ) }}
 ),
 
 date_attributes AS (

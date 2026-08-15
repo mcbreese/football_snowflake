@@ -17,13 +17,16 @@ target.
 
 Project root is `dbt_football_snowflake/`, not the repo root. Run all dbt
 commands from there, with `--profiles-dir .` (mirrors
-`.github/workflows/dbt_test.yml`):
+`.github/workflows/dbt_test.yml`). Always invoke dbt via `uv run dbt ...`,
+never bare `dbt` — a separate dbt Fusion preview binary also lives on this
+machine's PATH ahead of the project's tools and will silently shadow the
+pinned dbt-core/dbt-snowflake versions in `.venv` if invoked directly:
 
 ```
 cd dbt_football_snowflake
-dbt debug --profiles-dir .
-dbt deps --profiles-dir .
-dbt test --profiles-dir .
+uv run dbt debug --profiles-dir .
+uv run dbt deps --profiles-dir .
+uv run dbt test --profiles-dir .
 ```
 
 ## Architecture

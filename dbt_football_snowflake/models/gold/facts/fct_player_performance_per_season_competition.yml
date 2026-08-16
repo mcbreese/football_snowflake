@@ -65,10 +65,10 @@ models:
         data_type: NUMBER
       - name: avg_mins_per_appearance
         description: "{{ doc('avg_mins_per_appearance') }}"
-        data_type: DECIMAL(18, 8)
+        data_type: DECIMAL(10, 0)
       - name: avg_goals_per_90_mins
         description: "{{ doc('avg_goals_per_90_mins') }}"
-        data_type: DECIMAL(18, 8)
+        data_type: DECIMAL(10, 1)
       - name: games_won
         description: "{{ doc('games_won') }}"
         data_type: NUMBER

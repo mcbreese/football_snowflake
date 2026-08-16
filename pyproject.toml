@@ -1,7 +1,7 @@
 [project]
 name = "football-snowflake"
 version = "0.1.0"
-description = "Add your description here"
+description = "dbt Core transformation pipeline for football transfer and performance data, on Snowflake."
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [

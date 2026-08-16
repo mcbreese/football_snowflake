@@ -1,0 +1,56 @@
+version: 2
+
+models:
+  - name: stg_competitions
+    config:
+      meta:
+        owner: "Data Engineering"
+      contract:
+        enforced: true
+    description: "{{ doc('stg_competitions_model_description') }}"
+    columns:
+      - name: competition_sk
+        description: "{{ doc('competition_sk') }}"
+        data_type: STRING
+        tests:
+          - not_null
+          - unique
+      - name: competition_id
+        description: "{{ doc('competition_id') }}"
+        data_type: STRING
+        tests:
+          - not_null
+          - unique
+      - name: country_id
+        description: "{{ doc('country_id') }}"
+        data_type: INT
+      - name: domestic_league_code
+        description: "{{ doc('domestic_league_code') }}"
+        data_type: STRING
+      - name: name
+        description: "{{ doc('name') }}"
+        data_type: STRING
+      - name: type
+        description: "{{ doc('type') }}"
+        data_type: STRING
+      - name: sub_type
+        description: "{{ doc('sub_type') }}"
+        data_type: STRING
+      - name: country_name
+        description: "{{ doc('country_name') }}"
+        data_type: STRING
+      - name: confederation
+        description: "{{ doc('confederation') }}"
+        data_type: STRING
+      - name: is_major_national_league
+        description: "{{ doc('is_major_national_league') }}"
+        data_type: BOOLEAN
+      - name: loaded_timestamp
+        description: "{{ doc('loaded_timestamp') }}"
+        data_type: TIMESTAMP
+      - name: source_file
+        description: "{{ doc('source_file') }}"
+        data_type: STRING
+      - name: url
+        description: "{{ doc('url') }}"
+        data_type: STRING

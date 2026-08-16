@@ -1,0 +1,79 @@
+version: 2
+
+models:
+  - name: stg_appearances
+    config:
+      meta:
+        owner: "Data Engineering"
+      contract:
+        enforced: true
+    description: "{{ doc('stg_appearances_model_description') }}"
+    columns:
+      - name: appearance_player_sk
+        description: "{{ doc('appearance_player_sk') }}"
+        data_type: STRING
+        tests:
+          - not_null
+          - unique
+      - name: appearance_id
+        description: "{{ doc('appearance_id') }}"
+        data_type: STRING
+      - name: game_id
+        description: "{{ doc('game_id') }}"
+        data_type: INT
+        # Did originally test ref existes in stg_games but have missing data not yet overcome
+        tests:
+          - not_null
+      - name: player_id
+        description: "{{ doc('player_id') }}"
+        data_type: INT
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_players')
+                field: player_id
+      - name: player_club_id
+        description: "{{ doc('player_club_id') }}"
+        data_type: INT
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_clubs')
+                field: club_id
+      - name: competition_id
+        description: "{{ doc('competition_id') }}"
+        data_type: STRING
+        tests:
+          - relationships:
+              arguments:
+                to: ref('stg_competitions')
+                field: competition_id
+      - name: player_name
+        description: "{{ doc('player_name') }}"
+        data_type: STRING
+      - name: appearance_date
+        description: "{{ doc('appearance_date') }}"
+        data_type: DATE
+      - name: yellow_cards
+        description: "{{ doc('yellow_cards') }}"
+        data_type: INT
+      - name: red_cards
+        description: "{{ doc('red_cards') }}"
+        data_type: INT
+      - name: goals
+        description: "{{ doc('goals') }}"
+        data_type: INT
+      - name: assists
+        description: "{{ doc('assists') }}"
+        data_type: INT
+      - name: minutes_played
+        description: "{{ doc('minutes_played') }}"
+        data_type: INT
+      - name: loaded_timestamp
+        description: "{{ doc('loaded_timestamp') }}"
+        data_type: TIMESTAMP
+      - name: source_file
+        description: "{{ doc('source_file') }}"
+        data_type: STRING

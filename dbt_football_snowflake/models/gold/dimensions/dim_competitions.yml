@@ -1,0 +1,40 @@
+version: 2
+
+models:
+  - name: dim_competitions
+    config:
+      meta:
+        owner: "Analytics Department"
+        usage: "Club reference table for joining to facts"
+      materialized: table
+      contract:
+        enforced: true
+    description: "{{ doc('dim_competitions_model_description') }}"
+    columns:
+      - name: competition_sk
+        description: "{{ doc('competition_sk_pk') }}"
+        data_type: STRING
+        tests:
+          - not_null
+          - unique
+      - name: competition_id
+        description: "{{ doc('competition_id') }}"
+        data_type: STRING
+        tests:
+          - not_null
+          - unique
+      - name: name
+        description: "{{ doc('competition_name_dim') }}"
+        data_type: STRING
+      - name: type
+        description: "{{ doc('competition_type') }}"
+        data_type: STRING
+      - name: sub_type
+        description: "{{ doc('competition_sub_type') }}"
+        data_type: STRING
+      - name: country_name
+        description: "{{ doc('competition_country_name') }}"
+        data_type: STRING
+      - name: loaded_timestamp
+        description: "{{ doc('loaded_timestamp_dim') }}"
+        data_type: TIMESTAMP

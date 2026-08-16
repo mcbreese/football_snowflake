@@ -79,6 +79,13 @@ pipeline (runs on push/PR to `main`).
   contract file to match.
 - New gold-layer columns need a test *and* a contract entry before being
   considered done, not just before commit.
+- `meta.owner` values (`"Data Engineering"` on staging/intermediate,
+  `"Analytics Department"` on gold dimensions, `"Analytics / Data
+  Science"` on gold facts) are illustrative role labels standing in for
+  what a real org's ownership model would look like — this is a solo
+  project, so all three are currently the same person. Keep the labels
+  consistent with this pattern when adding models; don't invent new ones
+  without updating this note.
 
 ## Review Standard (senior DE lens)
 

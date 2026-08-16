@@ -48,7 +48,7 @@ jobs:
       # Restrict file permissions using chmod 600 for security
       - name: Write RSA Key to File
         run: |
-          echo "${{ secrets.RSA_KEY_CONTENTS }}" > rsa_key.p8
+          printf '%s\n' "$RSA_KEY_CONTENTS" > rsa_key.p8
           chmod 600 rsa_key.p8
           ls -la rsa_key.p8
 

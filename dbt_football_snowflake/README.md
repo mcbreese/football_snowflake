@@ -1,15 +1,18 @@
-Welcome to your new dbt project!
+# dbt_football_snowflake
 
-### Using the starter project
+The dbt Core project for the `football_snowflake` platform: staging,
+intermediate, and gold-layer transformations over football transfer and
+performance data, targeting Snowflake.
 
-Try running the following commands:
-- dbt run
-- dbt test
+Project root for all dbt commands is this directory — see the repo root
+[`README.md`](../README.md) for the project's background and logbook, and
+[`CLAUDE.md`](../CLAUDE.md) for architecture, running instructions, and
+conventions.
 
+### Running
 
-### Resources:
-- Learn more about dbt [in the docs](https://docs.getdbt.com/docs/introduction)
-- Check out [Discourse](https://discourse.getdbt.com/) for commonly asked questions and answers
-- Join the [chat](https://community.getdbt.com/) on Slack for live discussions and support
-- Find [dbt events](https://events.getdbt.com) near you
-- Check out [the blog](https://blog.getdbt.com/) for the latest news on dbt's development and best practices
+```
+uv run dbt debug --profiles-dir .
+uv run dbt deps --profiles-dir .
+uv run dbt test --profiles-dir .
+```

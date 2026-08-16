@@ -2,7 +2,7 @@ version: 2
 
 exposures:
   # -----------------------------------------------------------
-  # EXPOSURE 1: Player Analysis Dashboard (Databricks Report)
+  # EXPOSURE 1: Player Analysis Dashboard
   # -----------------------------------------------------------
   - name: player_analysis_dashboard
     label: Player Career & Performance Dashboard
@@ -18,7 +18,7 @@ exposures:
     owner:
       # Use an internal team or specific person
       name: Data & Analytics Team
-      email: example@gmail.com
+      email: data-team@example.com
 
     # Define the upstream models this report relies on
     depends_on:

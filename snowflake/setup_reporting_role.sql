@@ -35,8 +35,10 @@ GRANT SELECT ON ALL TABLES IN SCHEMA DEV_ANALYTICS.football_gold TO ROLE FOOTBAL
 -- dim_transfer_date seed), so this doesn't need re-running per model.
 GRANT SELECT ON FUTURE TABLES IN SCHEMA DEV_ANALYTICS.football_gold TO ROLE FOOTBALL_REPORTING;
 
--- Assign the role to whichever user/service account will actually query
--- as a reporting consumer (e.g. a future BI tool's service user, or your
--- own user if you just want to test the role's access). Uncomment and
--- fill in before running:
--- GRANT ROLE FOOTBALL_REPORTING TO USER <your_reporting_or_bi_user>;
+-- No separate BI tool/service account exists yet, so grant to your own
+-- user - a user can hold multiple roles and switch between them
+-- (USE ROLE FOOTBALL_REPORTING), letting you exercise the read-only
+-- grant without it being your default. Revisit this line (grant to a
+-- dedicated service user instead) once a real BI/reporting consumer
+-- exists.
+GRANT ROLE FOOTBALL_REPORTING TO USER MCBREESE;

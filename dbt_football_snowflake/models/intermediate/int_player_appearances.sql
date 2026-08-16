@@ -1,3 +1,10 @@
+{{ config(
+    materialized='incremental',
+    unique_key='player_appearance_sk',
+    incremental_strategy='merge',
+    on_schema_change='append_new_columns'
+) }}
+
 WITH player_appearances AS (
     SELECT ap.appearance_player_sk,
         pl.player_name,
@@ -44,6 +51,13 @@ WITH player_appearances AS (
         ON ap.competition_id = co.competition_id
     LEFT JOIN {{ ref('stg_games') }} AS gm
         ON ap.game_id = gm.game_id
+    -- A player with no appearances still matches the LEFT JOIN above with every
+    -- appearance-derived column NULL; this model is one row per appearance, so
+    -- exclude those phantom rows rather than relying on a downstream filter.
+    WHERE ap.appearance_id IS NOT NULL
+    {% if is_incremental() %}
+    AND ap.loaded_timestamp > (SELECT MAX(appearance_loaded_timestamp) FROM {{ this }})
+    {% endif %}
 )
 
 SELECT

@@ -63,3 +63,12 @@ models:
       +schema: gold
       +docs:
         node_color: "#FFD700" # gold color
+
+seeds:
+  dbt_football_snowflake:
+    dim_transfer_date:
+      +schema: gold
+      +column_types:
+        date_key: INT
+        date_day: DATE
+        transfer_season: STRING

@@ -21,7 +21,7 @@ AS (
 		appearance_id
 		,game_id
 		,player_id
-		,IFNULL(player_club_id,0) AS player_club_id
+		,COALESCE(player_club_id,0) AS player_club_id
 		,competition_id
 		,
 		-- dimensions
@@ -38,7 +38,7 @@ AS (
 		,source_file
 	FROM source ap
 	    -- Got a lot of missing clubs in my fct data - use an exists as skipping dq issue for personal project
-	    WHERE {{ exists_in_raw_clubs('IFNULL(ap.player_club_id,0)') }}
+	    WHERE {{ exists_in_raw_clubs('COALESCE(ap.player_club_id,0)') }}
 		AND EXISTS (SELECT * FROM players pl WHERE ap.player_id = pl.player_id)
 	)
 SELECT *

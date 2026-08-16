@@ -31,7 +31,7 @@ uv run dbt test --profiles-dir .
 
 ## Architecture
 
-Pipeline: raw CSV → PySpark bronze ingestion (`etl/`) → dbt staging →
+Pipeline: raw CSV → manually loaded into Snowflake → dbt staging →
 intermediate → gold, all within `dbt_football_snowflake/models/`. Per-layer
 schema, materialization, and tags are configured in
 `dbt_football_snowflake/dbt_project.yml`, read that file rather than
@@ -79,14 +79,6 @@ pipeline (runs on push/PR to `main`).
   contract file to match.
 - New gold-layer columns need a test *and* a contract entry before being
   considered done, not just before commit.
-- PySpark in `etl/`: I'm early-intermediate with Python and specifically
-  weak in PySpark. Before writing or changing anything non-trivial (window
-  functions, joins, partitioning choices, anything beyond basic
-  filter/select/rename), stop and explain the approach and why, and get my
-  confirmation before implementing, don't just implement and explain
-  afterwards. Avoid clever or idiomatic-but-opaque constructs I won't be
-  able to maintain solo. Prefer the more readable option over the more
-  "correct" one when they trade off.
 
 ## Review Standard (senior DE lens)
 

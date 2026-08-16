@@ -33,3 +33,4 @@ This section documents my journey building this analytics platform, highlighting
 | **11/12/2025** | **Refactoring for Production Readiness** | Refactored the initial Jupyter Notebook (`.ipynb`) used for prototyping into a modular, lightweight Python script (`load_raw_sources.py`), the preferred format for automated Databricks Jobs. | 
 | **23/07/2026** | **Development Environment** | Migrating workflow to Snowflake. | 
 | **11/08/2026** | **AI-Assisted Development** | Brought Claude Code in as a pair-programming assistant — helped explain the codebase, folder structure, and dbt pipeline architecture. |
+| **16/08/2026** | **Bronze Layer Retirement** | Removed the Databricks-only PySpark bronze-ingestion script (`etl/`) — raw CSVs are now loaded into Snowflake manually, so the pipeline is `Raw CSV -> Manual Snowflake Load -> DBT Staging -> Intermediate -> Gold`. |

@@ -1,0 +1,50 @@
+version: 2
+
+models:
+  - name: stg_transfers
+    config:
+      meta:
+        owner: "Data Engineering"
+      contract:
+        enforced: true
+    description: "{{ doc('stg_transfers_model_description') }}"
+    columns:
+      - name: player_transfer_sk
+        description: "{{ doc('player_transfer_sk') }}"
+        data_type: STRING
+        tests:
+          - not_null
+          - unique
+      - name: player_id
+        description: "{{ doc('player_id') }}"
+        data_type: INT
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_players')
+                field: player_id
+      - name: from_club_id
+        description: "{{ doc('from_club_id') }}"
+        data_type: INT
+      - name: to_club_id
+        description: "{{ doc('to_club_id') }}"
+        data_type: INT
+      - name: transfer_date
+        description: "{{ doc('transfer_date') }}"
+        data_type: DATE
+      - name: transfer_season
+        description: "{{ doc('transfer_season') }}"
+        data_type: STRING
+      - name: transfer_fee
+        description: "{{ doc('transfer_fee') }}"
+        data_type: NUMBER
+      - name: market_value_in_eur
+        description: "{{ doc('market_value_in_eur') }}"
+        data_type: NUMBER
+      - name: loaded_timestamp
+        description: "{{ doc('loaded_timestamp') }}"
+        data_type: TIMESTAMP
+      - name: source_file
+        description: "{{ doc('source_file') }}"
+        data_type: STRING

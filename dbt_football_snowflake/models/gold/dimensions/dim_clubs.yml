@@ -1,0 +1,33 @@
+version: 2
+
+models:
+  - name: dim_clubs
+    config:
+      meta:
+        owner: "Analytics Department"
+        usage: "Club reference table for joining to facts"
+      materialized: table
+      contract:
+        enforced: true
+    description: "{{ doc('dim_clubs_model_description') }}"
+    columns:
+      - name: club_sk
+        description: "{{ doc('club_sk_pk') }}"
+        data_type: STRING
+        tests:
+          - not_null
+          - unique
+      - name: club_id
+        description: "{{ doc('club_id') }}"
+        data_type: INT
+        tests:
+          - not_null
+          - unique
+      - name: name
+        description: "{{ doc('club_name') }}"
+        data_type: STRING
+        tests:
+          - not_null
+      - name: loaded_timestamp
+        description: "{{ doc('loaded_timestamp_dim') }}"
+        data_type: TIMESTAMP

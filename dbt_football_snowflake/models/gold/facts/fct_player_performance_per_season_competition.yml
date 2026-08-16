@@ -1,0 +1,85 @@
+version: 2
+
+models:
+  - name: fct_player_performance_per_season_competition
+    config:
+      meta:
+        owner: "Analytics / Data Science"
+        usage: "Primary Mart for Player Scouting and Trend Analysis"
+      materialized: table
+      contract:
+        enforced: true
+    description: "{{ doc('fct_performance_model_description') }}"
+    columns:
+      - name: player_performance_sk
+        description: "{{ doc('player_performance_sk') }}"
+        data_type: STRING
+        tests:
+          - not_null
+          - unique
+      - name: player_id
+        description: "{{ doc('player_id') }}"
+        data_type: INT
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_players')
+                field: player_id
+      - name: club_id
+        description: "{{ doc('club_id') }}"
+        data_type: INT
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_clubs')
+                field: club_id
+      - name: season
+        description: "{{ doc('season') }}"
+        data_type: INT
+        tests:
+          - not_null
+      - name: competition_name
+        description: "{{ doc('competition_name_fct') }}"
+        data_type: STRING
+        tests:
+          - not_null
+      - name: total_appearances
+        description: "{{ doc('total_appearances') }}"
+        data_type: NUMBER
+      - name: total_yellow_cards
+        description: "{{ doc('total_yellow_cards') }}"
+        data_type: NUMBER
+      - name: total_red_cards
+        description: "{{ doc('total_red_cards') }}"
+        data_type: NUMBER
+      - name: total_goals
+        description: "{{ doc('total_goals') }}"
+        data_type: NUMBER
+      - name: total_assists
+        description: "{{ doc('total_assists') }}"
+        data_type: NUMBER
+      - name: total_minutes_played
+        description: "{{ doc('total_minutes_played') }}"
+        data_type: NUMBER
+      - name: avg_mins_per_appearance
+        description: "{{ doc('avg_mins_per_appearance') }}"
+        data_type: DECIMAL(18, 8)
+      - name: avg_goals_per_90_mins
+        description: "{{ doc('avg_goals_per_90_mins') }}"
+        data_type: DECIMAL(18, 8)
+      - name: games_won
+        description: "{{ doc('games_won') }}"
+        data_type: NUMBER
+      - name: games_lost
+        description: "{{ doc('games_lost') }}"
+        data_type: NUMBER
+      - name: games_drawn
+        description: "{{ doc('games_drawn') }}"
+        data_type: NUMBER
+      - name: first_appearance_loaded_timestamp
+        description: "{{ doc('first_appearance_loaded_timestamp') }}"
+        data_type: TIMESTAMP
+        tests:
+          - not_null

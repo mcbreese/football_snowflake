@@ -1,0 +1,48 @@
+version: 2
+
+models:
+  - name: dim_players
+    config:
+      meta:
+        owner: "Analytics Department"
+        usage: "Club reference table for joining to facts"
+      materialized: table
+      contract:
+        enforced: true
+    description: "{{ doc('dim_players_model_description') }}"
+    columns:
+      - name: player_sk
+        description: "{{ doc('player_sk_pk') }}"
+        data_type: STRING
+        tests:
+          - not_null
+          - unique
+      - name: player_id
+        description: "{{ doc('player_id') }}"
+        data_type: INT
+        tests:
+          - not_null
+          - unique
+      - name: player_name
+        description: "{{ doc('player_name') }}"
+        data_type: STRING
+        tests:
+          - not_null
+      - name: nationality
+        description: "{{ doc('nationality') }}"
+        data_type: STRING
+      - name: sub_position
+        description: "{{ doc('sub_position') }}"
+        data_type: STRING
+      - name: foot
+        description: "{{ doc('foot') }}"
+        data_type: STRING
+      - name: age_in_years
+        description: "{{ doc('age_in_years') }}"
+        data_type: DECIMAL(18,8)
+      - name: last_season
+        description: "{{ doc('last_season') }}"
+        data_type: INT
+      - name: loaded_timestamp
+        description: "{{ doc('loaded_timestamp_dim') }}"
+        data_type: TIMESTAMP

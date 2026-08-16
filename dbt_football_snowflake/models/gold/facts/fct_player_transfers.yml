@@ -1,0 +1,62 @@
+version: 2
+
+models:
+  - name: fct_player_transfers
+    config:
+      meta:
+        owner: "Analytics / Data Science"
+        usage: "Primary Mart for Player Scouting and Trend Analysis"
+      materialized: table
+      contract:
+        enforced: true
+    description: "{{ doc('fct_transfers_model_description') }}"
+    columns:
+      - name: player_transfer_sk
+        description: "{{ doc('player_transfer_sk') }}"
+        data_type: STRING
+        tests:
+          - not_null
+          - unique
+      - name: player_id
+        description: "{{ doc('player_id') }}"
+        data_type: INT
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_players')
+                field: player_id
+      - name: from_club_id
+        description: "{{ doc('from_club_id') }}"
+        data_type: INT
+        # removed ref to club_id due to data issue with dim
+      - name: to_club_id
+        description: "{{ doc('to_club_id') }}"
+        data_type: INT
+        # removed ref to club_id due to data issue with dim
+      - name: transfer_date_key
+        description: "{{ doc('date_key') }}"
+        data_type: INT
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_transfer_date')
+                field: date_key
+      - name: transfer_date
+        description: "{{ doc('transfer_date') }}"
+        data_type: DATE
+        tests:
+          - not_null
+      - name: transfer_fee
+        description: "{{ doc('transfer_fee') }}"
+        data_type: NUMBER
+      - name: market_value_in_eur
+        description: "{{ doc('market_value_in_eur') }}"
+        data_type: NUMBER
+      - name: transfer_season
+        description: "{{ doc('transfer_season') }}"
+        data_type: STRING
+      - name: transfer_loaded_timestamp
+        description: "{{ doc('transfer_loaded_timestamp') }}"
+        data_type: TIMESTAMP

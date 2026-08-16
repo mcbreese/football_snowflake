@@ -56,7 +56,7 @@ models:
         data_type: DATE
       - name: age_in_years
         description: "{{ doc('age_in_years') }}"
-        data_type: DECIMAL(18,8)
+        data_type: INT
       - name: last_season
         description: "{{ doc('last_season') }}"
         data_type: INT

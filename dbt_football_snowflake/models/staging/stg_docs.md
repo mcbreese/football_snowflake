@@ -122,7 +122,7 @@ The player's official nationality.
 {% enddocs %}
 
 {% docs position %}
-The player's primary field position (e.g., 'Attack', 'Midfield', 'Defence').
+The player's primary field position: 'Attack', 'Defender', 'Goalkeeper', 'Midfield', or 'Missing'.
 {% enddocs %}
 
 {% docs sub_position %}
@@ -130,7 +130,7 @@ The player's specific position (e.g., 'Centre-Forward', 'Centre-Back').
 {% enddocs %}
 
 {% docs foot %}
-The player's preferred foot (e.g., 'left', 'right', 'both').
+The player's preferred foot: 'left', 'right', 'both', or 'Unknown' if not recorded in source data.
 {% enddocs %}
 
 {% docs height_in_cm %}

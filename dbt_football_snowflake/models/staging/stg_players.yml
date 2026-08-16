@@ -39,12 +39,20 @@ models:
       - name: position
         description: "{{ doc('position') }}"
         data_type: STRING
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['Attack', 'Defender', 'Goalkeeper', 'Midfield', 'Missing']
       - name: sub_position
         description: "{{ doc('sub_position') }}"
         data_type: STRING
       - name: foot
         description: "{{ doc('foot') }}"
         data_type: STRING
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['Unknown', 'both', 'left', 'right']
       - name: height_in_cm
         description: "{{ doc('height_in_cm') }}"
         data_type: INT

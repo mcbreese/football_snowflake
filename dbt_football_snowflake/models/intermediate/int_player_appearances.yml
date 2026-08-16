@@ -57,12 +57,27 @@ models:
       - name: home_away
         description: "{{ doc('home_away') }}"
         data_type: STRING
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['home', 'away']
       - name: outcome
         description: "{{ doc('outcome') }}"
         data_type: STRING
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['home', 'away', 'draw']
       - name: player_win_loss
         description: "{{ doc('player_win_loss') }}"
         data_type: STRING
+        # 'error' deliberately excluded from accepted_values: it's an ELSE
+        # fallback in the SQL CASE that should never fire. If it does, this
+        # test should fail loudly rather than silently accept it.
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['player_win', 'player_loss', 'draw']
       - name: competition_name
         description: "{{ doc('competition_name') }}"
         data_type: STRING

@@ -68,7 +68,15 @@ run autonomously. There is only one target at the moment and it is a dev environ
 ## CI
 
 `.github/workflows/dbt_test.yml` is the source of truth for the test
-pipeline (runs on push/PR to `main`).
+pipeline (runs on PR to `main` only — `main` is merge-protected on this
+check, so a push to `main` only ever happens via an already-passing PR;
+re-running on push would be redundant).
+
+Always does a full `dbt build` (no `state:modified+`/`--defer`
+selection). Deliberately parked, not forgotten — revisit if the
+full-DAG rebuild time or CI compute cost actually starts to matter,
+which would also need a way to diff against main's last successful
+state across separate workflow runs (not just a flag on this one).
 
 ## Conventions (judgement calls the contracts files can't express)
 

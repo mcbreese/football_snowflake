@@ -1,10 +1,12 @@
 # The name of the pipeline as it appears in the GitHub Actions dashboard
 name: dbt CI Pipeline
 
-# Trigger the pipeline on pushes or pull requests targeting the main branch
+# Trigger the pipeline on pull requests targeting the main branch. Not on
+# push: main - main is merge-protected on this check, so a push to main
+# only ever happens via a PR that already ran this identical full build;
+# re-running it again on push would just double the compute cost per
+# merge for no new information.
 on:
-  push:
-    branches: [main]
   pull_request:
     branches: [main]
 

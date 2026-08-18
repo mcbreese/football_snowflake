@@ -5,8 +5,8 @@ sources:
     config:
       tags: ["raw", "source"] # Tags for easy selection/exclusion
     description: "The raw, untransformed football data ingested into Snowflake."
-    database: dev_raw
-    schema: public # The schema where the raw tables reside
+    database: RAW
+    schema: football # The schema where the raw tables reside
     
     tables:
       - name: raw_appearances

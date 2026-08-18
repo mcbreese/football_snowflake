@@ -2,15 +2,15 @@ dbt_football_snowflake:
   target: dev
   outputs:
     dev:
-      type: snowflake 
+      type: snowflake
       # Connection Credentials
       account: "{{ env_var('SNOWFLAKE_ACCOUNT') }}"
       user: "{{ env_var('SNOWFLAKE_USER') }}"
 
       # Role & Compute Resources
-      role: DATA_ENGINEER
+      role: DEV_ROLE
       warehouse: DEV_TRANSFORM_WH
-      
+
       # Target Landing Database for Dev
       database: DEV_ANALYTICS
       schema: football
@@ -21,4 +21,53 @@ dbt_football_snowflake:
 
       # Optimization settings
       threads: 1
+      client_session_keep_alive: False
+
+    ci:
+      type: snowflake
+      # Connection Credentials
+      account: "{{ env_var('SNOWFLAKE_ACCOUNT') }}"
+      user: "{{ env_var('SNOWFLAKE_USER') }}"
+
+      # Role & Compute Resources
+      role: CI_ROLE
+      warehouse: DEV_TRANSFORM_WH
+
+      # Throwaway per-PR schema, repurposed from the empty STG_ANALYTICS.
+      # No default on DBT_CI_SCHEMA - an unset value should fail loudly,
+      # not silently land in the wrong schema. See
+      # macros/generate_schema_name.sql for how this collapses every
+      # layer (stg/int/gold) into this one flat schema for CI builds.
+      database: CI_ANALYTICS
+      schema: "{{ env_var('DBT_CI_SCHEMA') }}"
+
+      # Key-Pair setup (No password needed)
+      private_key_path: "{{ env_var('PK_PATH', 'rsa_key.p8') }}"
+      private_key_passphrase: "{{ env_var('PK_PASSPHRASE') }}"
+
+      # Optimization settings
+      threads: 4
+      client_session_keep_alive: False
+
+    prod:
+      type: snowflake
+      # Connection Credentials
+      account: "{{ env_var('SNOWFLAKE_ACCOUNT') }}"
+      user: "{{ env_var('SNOWFLAKE_USER') }}"
+
+      # Role & Compute Resources
+      role: PROD_ROLE
+      warehouse: DEV_TRANSFORM_WH
+
+      # Source-of-truth production database. Never run against this
+      # target without explicit confirmation - see CLAUDE.md.
+      database: PRD_ANALYTICS
+      schema: football
+
+      # Key-Pair setup (No password needed)
+      private_key_path: "{{ env_var('PK_PATH', 'rsa_key.p8') }}"
+      private_key_passphrase: "{{ env_var('PK_PASSPHRASE') }}"
+
+      # Optimization settings
+      threads: 4
       client_session_keep_alive: False

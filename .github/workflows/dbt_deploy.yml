@@ -1,0 +1,69 @@
+# The name of the pipeline as it appears in the GitHub Actions dashboard
+name: dbt Prod Deploy
+
+# This is the source-of-truth prod deploy (writes to PRD_ANALYTICS via
+# PROD_ROLE) triggered on every push to main, not a redundant duplicate of
+# dbt_test.yml's PR check - so it doesn't reintroduce the double-build cost
+# problem that push:main trigger was originally removed for. Its manifest
+# artifact is what dbt_test.yml diffs PRs against via state:modified+.
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    # Run the workflow on a fresh GitHub-hosted Ubuntu runner
+    runs-on: ubuntu-latest
+
+    # Global environment variables accessible across steps
+    # Note: Sensitive values are pulled directly from GitHub Repository Secrets
+    env:
+      SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
+      SNOWFLAKE_USER: ${{ secrets.SNOWFLAKE_USER }}
+      RSA_KEY_CONTENTS: ${{ secrets.RSA_KEY_CONTENTS }}
+      PK_PASSPHRASE: ${{ secrets.PK_PASSPHRASE }}
+      PK_PATH: "./rsa_key.p8" # Define variable here, we will write to it in a later step
+
+    # Set default execution directory to the dbt project folder for all run steps
+    defaults:
+      run:
+        working-directory: ./dbt_football_snowflake
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dbt
+        run: |
+          python -m pip install --upgrade pip
+          pip install "dbt-core==1.12.*" "dbt-snowflake==1.12.*"
+
+      - name: Write RSA Key to File
+        run: |
+          printf '%s\n' "$RSA_KEY_CONTENTS" > rsa_key.p8
+          chmod 600 rsa_key.p8
+          ls -la rsa_key.p8
+
+      - name: Check dbt connection
+        run: dbt debug --target prod --profiles-dir .
+
+      - name: Install dbt packages
+        run: dbt deps --profiles-dir .
+
+      - name: Run dbt build (prod)
+        run: dbt build --target prod --profiles-dir .
+
+      # Only reached if the build above succeeded, so a failed prod build
+      # never publishes a manifest representing broken/partial state for
+      # PR runs to diff against.
+      - name: Upload manifest artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: prod-manifest
+          path: dbt_football_snowflake/target/manifest.json
+          retention-days: 90

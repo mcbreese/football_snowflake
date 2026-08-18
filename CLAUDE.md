@@ -54,29 +54,45 @@ definitions rather than inferring schema from model SQL alone.
 ## Auth
 
 Snowflake key-pair auth via `private_key_path` (`profiles.yml`, defaults to
-`rsa_key.p8`). The key is never committed, CI materialises it at runtime
-from `secrets.RSA_KEY_CONTENTS` (`.github/workflows/dbt_test.yml`). Don't
-create or commit a real key file locally.
+`rsa_key.p8`). The key is never committed; each GitHub Actions workflow that
+needs it (`dbt_test.yml`, `dbt_deploy.yml`, `dbt_ci_teardown.yml`)
+materialises it at runtime from `secrets.RSA_KEY_CONTENTS`. Don't create or
+commit a real key file locally.
 
 ## Environment / target safety
 
-Never run `dbt run`, `dbt build`, or `dbt test` against a production target
-without explicit confirmation from me first, even if a production target is
-configured in `profiles.yml`. Default to the dev target for anything you
-run autonomously. There is only one target at the moment and it is a dev environment.
+Three targets exist in `profiles.yml`: `dev` (local, `DEV_ROLE`), `ci`
+(PR builds, `CI_ROLE`, throwaway per-PR schema in `CI_ANALYTICS`), and
+`prod` (`PROD_ROLE`, writes to `PRD_ANALYTICS`). Never run `dbt run`, `dbt
+build`, or `dbt test` against `--target prod` without explicit confirmation
+from me first — that includes locally, not just suggesting CI changes.
+Default to the dev target for anything you run autonomously. In CI, `prod`
+is only ever invoked by `dbt_deploy.yml` (triggered on `push: main`, i.e.
+only after a PR has already merged) — never add a `--target prod` build to
+`dbt_test.yml` or any PR-triggered workflow.
 
 ## CI
 
-`.github/workflows/dbt_test.yml` is the source of truth for the test
-pipeline (runs on PR to `main` only — `main` is merge-protected on this
-check, so a push to `main` only ever happens via an already-passing PR;
-re-running on push would be redundant).
+Three workflows, each with a distinct role/target — see
+`snowflake/setup_ci_prod_roles.sql` for the underlying Snowflake role/db
+setup:
 
-Always does a full `dbt build` (no `state:modified+`/`--defer`
-selection). Deliberately parked, not forgotten — revisit if the
-full-DAG rebuild time or CI compute cost actually starts to matter,
-which would also need a way to diff against main's last successful
-state across separate workflow runs (not just a flag on this one).
+- `.github/workflows/dbt_test.yml` — PR checks against `--target ci`.
+  Builds only `state:modified+` (changed models + downstream dependents),
+  deferring unbuilt refs to the last successful prod state via `--defer
+  --state`. Falls back to a full build if no prod manifest is available yet
+  (first run, or an expired/missing artifact). Each PR gets its own flat
+  scratch schema (`CI_ANALYTICS.pr_<n>`, see
+  `macros/generate_schema_name.sql`).
+- `.github/workflows/dbt_deploy.yml` — the actual prod deploy, triggered on
+  `push: main` (i.e. only after a PR has already merged and passed
+  `dbt_test.yml` — this doesn't double the per-merge build cost, it's doing
+  a genuinely different thing: writing to `PRD_ANALYTICS` via `--target
+  prod`, then publishing `target/manifest.json` as a `prod-manifest`
+  artifact for `dbt_test.yml` to diff PRs against).
+- `.github/workflows/dbt_ci_teardown.yml` — drops a PR's `CI_ANALYTICS`
+  scratch schema on merge or close (`dbt run-operation drop_ci_schema
+  --target ci`).
 
 ## Conventions (judgement calls the contracts files can't express)
 

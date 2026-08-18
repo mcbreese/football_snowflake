@@ -36,6 +36,7 @@ AS (
 		-- metadata
 		,loaded_timestamp
 		,source_file
+		-- Testing state change by adding comments to the staging model
 	FROM source ap
 	    -- Got a lot of missing clubs in my fct data - use an exists as skipping dq issue for personal project
 	    WHERE {{ exists_in_raw_clubs('COALESCE(ap.player_club_id,0)') }}

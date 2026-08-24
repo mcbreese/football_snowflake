@@ -50,10 +50,10 @@ models:
           - not_null
       - name: transfer_fee
         description: "{{ doc('transfer_fee') }}"
-        data_type: NUMBER
+        data_type: DECIMAL(15, 3)
       - name: market_value_in_eur
         description: "{{ doc('market_value_in_eur') }}"
-        data_type: NUMBER
+        data_type: DECIMAL(15, 3)
       - name: transfer_season
         description: "{{ doc('transfer_season') }}"
         data_type: STRING

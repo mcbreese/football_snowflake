@@ -35,13 +35,13 @@ models:
         data_type: INT
       - name: average_age
         description: "{{ doc('average_age') }}"
-        data_type: NUMBER
+        data_type: DECIMAL(4, 1)
       - name: foreigners_number
         description: "{{ doc('foreigners_number') }}"
         data_type: INT
       - name: foreigners_percentage
         description: "{{ doc('foreigners_percentage') }}"
-        data_type: NUMBER
+        data_type: DECIMAL(4, 1)
       - name: national_team_players
         description: "{{ doc('national_team_players') }}"
         data_type: INT

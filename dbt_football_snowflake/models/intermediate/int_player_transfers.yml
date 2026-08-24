@@ -29,10 +29,10 @@ models:
         data_type: STRING
       - name: transfer_fee
         description: "{{ doc('transfer_fee') }}"
-        data_type: NUMBER
+        data_type: DECIMAL(15, 3)
       - name: market_value_in_eur
         description: "{{ doc('market_value_in_eur') }}"
-        data_type: NUMBER
+        data_type: DECIMAL(15, 3)
       - name: player_name
         description: "{{ doc('player_name') }}"
         data_type: STRING

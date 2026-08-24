@@ -29,6 +29,9 @@ uv run dbt deps --profiles-dir .
 uv run dbt test --profiles-dir .
 ```
 
+This is the general invocation pattern; see "Environment / target safety"
+below for which `--target` is actually safe to run autonomously.
+
 ## Architecture
 
 Pipeline: raw CSV → manually loaded into Snowflake → dbt staging →
@@ -60,17 +63,42 @@ needs it (`dbt_test.yml`, `dbt_deploy.yml`, `dbt_ci_teardown.yml`)
 materialises it at runtime from `secrets.RSA_KEY_CONTENTS`. Don't create or
 commit a real key file locally.
 
+Two separate local credential files, deliberately not shared:
+- `.vscode/settings.json` — the user's own personal login (`MCBREESE`),
+  holds `DEV_ROLE`/`CI_ROLE`/`PROD_ROLE`. This is for the user's own
+  interactive use (VS Code's integrated terminal). Claude should not read
+  or use this file.
+- `.claude/snowflake_readonly.env` — Claude's own credentials, a
+  completely separate Snowflake user (`CLAUDE_SERVICE`) that only ever
+  holds `CLAUDE_READONLY_ROLE` (see `snowflake/setup_claude_readonly_role.sql`).
+  Source it (`source .claude/snowflake_readonly.env`) before running
+  `--target claude_readonly`. Uses `CLAUDE_`-prefixed env var names
+  specifically so it can never collide with or get accidentally
+  substituted for the personal credential's env vars.
+
 ## Environment / target safety
 
-Three targets exist in `profiles.yml`: `dev` (local, `DEV_ROLE`), `ci`
-(PR builds, `CI_ROLE`, throwaway per-PR schema in `CI_ANALYTICS`), and
-`prod` (`PROD_ROLE`, writes to `PRD_ANALYTICS`). Never run `dbt run`, `dbt
-build`, or `dbt test` against `--target prod` without explicit confirmation
-from me first — that includes locally, not just suggesting CI changes.
-Default to the dev target for anything you run autonomously. In CI, `prod`
-is only ever invoked by `dbt_deploy.yml` (triggered on `push: main`, i.e.
-only after a PR has already merged) — never add a `--target prod` build to
-`dbt_test.yml` or any PR-triggered workflow.
+Four targets exist in `profiles.yml`: `dev` (`DEV_ROLE`), `ci` (PR builds,
+`CI_ROLE`, throwaway per-PR schema in `CI_ANALYTICS`), `prod` (`PROD_ROLE`,
+writes to `PRD_ANALYTICS`), and `claude_readonly` (`CLAUDE_READONLY_ROLE`,
+read-only). The first three all authenticate as the user's personal login
+and are only ever run by the user themselves or by CI (via GitHub
+Secrets, a separate credential from the user's personal one) — **never
+run `dbt build`, `dbt run`, or `dbt test` locally against `dev`, `ci`, or
+`prod` autonomously**, regardless of target. This isn't just a prod-only
+rule anymore: rely on GitHub Actions run logs (`gh run view --log`) to
+know whether a build/test succeeded or failed, since `dbt_test.yml`/
+`dbt_deploy.yml` already run with properly-scoped, non-personal
+credentials. If a build genuinely needs to happen locally, ask the user
+to run it.
+
+`claude_readonly` is the one target safe to use autonomously for local
+investigation — `dbt debug`/`compile`/`parse`/`list`/`show` (including ad
+hoc `--inline` queries) all work fine under it, and it's hard-scoped
+`SELECT`-only by Snowflake itself (`CLAUDE_READONLY_ROLE` is never granted
+`DEV_ROLE`/`CI_ROLE`/`PROD_ROLE`), so there's no write path available
+regardless of what's asked of it — a real enforced boundary, not a
+followed convention.
 
 ## CI
 

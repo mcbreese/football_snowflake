@@ -49,6 +49,32 @@ dbt_football_snowflake:
       threads: 4
       client_session_keep_alive: False
 
+    # Claude Code's own local investigation target - CLAUDE_READONLY_ROLE
+    # is never granted DEV_ROLE/CI_ROLE/PROD_ROLE, so this connection
+    # cannot build/write regardless of what's asked of it (Snowflake
+    # rejects the role switch outright, not just a followed convention).
+    # Deliberately separate env var names (CLAUDE_SNOWFLAKE_USER/
+    # CLAUDE_PK_PATH/CLAUDE_PK_PASSPHRASE, not SNOWFLAKE_USER/PK_PATH/
+    # PK_PASSPHRASE) so there's no chance of this target accidentally
+    # picking up the personal credential, or vice versa. See
+    # snowflake/setup_claude_readonly_role.sql and .claude/snowflake_readonly.env.
+    claude_readonly:
+      type: snowflake
+      account: "{{ env_var('SNOWFLAKE_ACCOUNT') }}"
+      user: "{{ env_var('CLAUDE_SNOWFLAKE_USER') }}"
+
+      role: CLAUDE_READONLY_ROLE
+      warehouse: DEV_TRANSFORM_WH
+
+      database: DEV_ANALYTICS
+      schema: football
+
+      private_key_path: "{{ env_var('CLAUDE_PK_PATH') }}"
+      private_key_passphrase: "{{ env_var('CLAUDE_PK_PASSPHRASE') }}"
+
+      threads: 1
+      client_session_keep_alive: False
+
     prod:
       type: snowflake
       # Connection Credentials

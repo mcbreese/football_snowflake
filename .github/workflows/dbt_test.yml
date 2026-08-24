@@ -40,15 +40,22 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      # Installs the exact dbt-core/dbt-snowflake versions pinned in
+      # uv.lock - matches local dev exactly (CLAUDE.md's "Always invoke
+      # dbt via uv run dbt ..." rule), instead of pip's previous floating
+      # `==1.12.*` install which could silently drift to a different
+      # patch version than what's locked.
+      - name: Install uv
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
         with:
-          python-version: "3.12"
+          enable-cache: true
 
-      - name: Install dbt
-        run: |
-          python -m pip install --upgrade pip
-          pip install "dbt-core==1.12.*" "dbt-snowflake==1.12.*"
+      # pyproject.toml/uv.lock live at the repo root, not
+      # dbt_football_snowflake/ (this job's default working-directory) -
+      # override just for this step.
+      - name: Install dependencies
+        working-directory: .
+        run: uv sync --locked
 
       - name: Write RSA Key to File
         run: |
@@ -57,10 +64,10 @@ jobs:
           ls -la rsa_key.p8
 
       - name: Check dbt connection
-        run: dbt debug --target ci --profiles-dir .
+        run: uv run dbt debug --target ci --profiles-dir .
 
       - name: Install dbt packages
-        run: dbt deps --profiles-dir .
+        run: uv run dbt deps --profiles-dir .
 
       # --- State-based CI: fetch the most recent successful prod manifest
       # so PR builds can diff against real prod state via state:modified+.
@@ -136,10 +143,10 @@ jobs:
       # refs to unbuilt nodes against prod's last known state.
       - name: Run dbt build (state-based)
         if: steps.build_mode.outputs.mode == 'state'
-        run: dbt build --target ci --select state:modified+ --state ./state --defer --profiles-dir .
+        run: uv run dbt build --target ci --select state:modified+ --state ./state --defer --profiles-dir .
 
       # No prior prod manifest available (first-ever run, or the artifact
       # expired/was missing) - build everything, same as before this change.
       - name: Run dbt build (full)
         if: steps.build_mode.outputs.mode == 'full'
-        run: dbt build --target ci --profiles-dir .
+        run: uv run dbt build --target ci --profiles-dir .

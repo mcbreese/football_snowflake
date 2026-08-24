@@ -8,3 +8,9 @@ logs/
 profiling/data
 rsa_key.p8
 rsa_key.pub
+
+# Claude Code's own read-only Snowflake service credentials - separate
+# identity from the personal login above, see snowflake/setup_claude_readonly_role.sql
+.claude/claude_readonly_key.p8
+.claude/claude_readonly_key.pub
+.claude/snowflake_readonly.env

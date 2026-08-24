@@ -47,22 +47,22 @@ models:
           - not_null
       - name: total_appearances
         description: "{{ doc('total_appearances') }}"
-        data_type: NUMBER
+        data_type: INT
       - name: total_yellow_cards
         description: "{{ doc('total_yellow_cards') }}"
-        data_type: NUMBER
+        data_type: INT
       - name: total_red_cards
         description: "{{ doc('total_red_cards') }}"
-        data_type: NUMBER
+        data_type: INT
       - name: total_goals
         description: "{{ doc('total_goals') }}"
-        data_type: NUMBER
+        data_type: INT
       - name: total_assists
         description: "{{ doc('total_assists') }}"
-        data_type: NUMBER
+        data_type: INT
       - name: total_minutes_played
         description: "{{ doc('total_minutes_played') }}"
-        data_type: NUMBER
+        data_type: INT
       - name: avg_mins_per_appearance
         description: "{{ doc('avg_mins_per_appearance') }}"
         data_type: DECIMAL(10, 0)
@@ -71,13 +71,13 @@ models:
         data_type: DECIMAL(10, 1)
       - name: games_won
         description: "{{ doc('games_won') }}"
-        data_type: NUMBER
+        data_type: INT
       - name: games_lost
         description: "{{ doc('games_lost') }}"
-        data_type: NUMBER
+        data_type: INT
       - name: games_drawn
         description: "{{ doc('games_drawn') }}"
-        data_type: NUMBER
+        data_type: INT
       - name: first_appearance_loaded_timestamp
         description: "{{ doc('first_appearance_loaded_timestamp') }}"
         data_type: TIMESTAMP

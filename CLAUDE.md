@@ -43,10 +43,11 @@ adding models.
 
 ## Data contracts & sources
 
-Each layer enforces its schema via a contracts file:
-`models/staging/stg_data_contracts.yml`,
-`models/gold/dimensions/dim_data_contracts.yml`,
-`models/gold/facts/fct_data_contracts.yml`. Sources are declared in
+Every model enforces its own schema via a one-per-model contract file
+(`models/<layer>/<model>.yml`, e.g. `models/staging/stg_clubs.yml`,
+`models/gold/facts/fct_player_transfers.yml`) with `contract.enforced:
+true` set individually — staging and intermediate models are contracted
+too, not just gold. Sources are declared in
 `models/staging/sources/stg_sources.yml`, exposures in
 `models/exposures.yml`. Check these files for current column/type
 definitions rather than inferring schema from model SQL alone.

@@ -38,7 +38,7 @@ models:
         data_type: DATE
       - name: market_value_in_eur
         description: "{{ doc('market_value_in_eur') }}"
-        data_type: NUMBER
+        data_type: DECIMAL(15, 3)
       - name: loaded_timestamp
         description: "{{ doc('loaded_timestamp') }}"
         data_type: TIMESTAMP

@@ -46,6 +46,11 @@ jobs:
       # pyproject.toml/uv.lock live at the repo root, not
       # dbt_football_snowflake/ (this job's default working-directory) -
       # override just for this step.
+      #
+      # --locked: install exactly what's in uv.lock and fail instead of
+      # re-resolving if pyproject.toml and the lockfile have drifted out
+      # of sync - surfaces a stale lockfile as a CI failure instead of
+      # silently installing different versions than what's committed.
       - name: Install dependencies
         working-directory: .
         run: uv sync --locked

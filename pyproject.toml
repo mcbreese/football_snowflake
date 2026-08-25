@@ -13,4 +13,8 @@ dependencies = [
 dev = [
     "sqlfluff>=4.3.0",
     "sqlfluff-templater-dbt>=4.3.0",
+    "black>=25.1.0",
 ]
+
+[tool.black]
+target-version = ["py312"]

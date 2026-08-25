@@ -76,6 +76,17 @@ Two separate local credential files, deliberately not shared:
   specifically so it can never collide with or get accidentally
   substituted for the personal credential's env vars.
 
+  For `sqlfluff` specifically (its `dbt` templater needs a target, not
+  just these connection vars), also `export DBT_ENGINE_TARGET=claude_readonly`.
+  `dbt_football_snowflake/.sqlfluff` deliberately does **not** hardcode
+  `target` in `[sqlfluff:templater:dbt]` — an explicit config value there
+  would always beat the env var, which is exactly wrong: CI needs the
+  same file to resolve to `ci` instead (see the `lint` job below). If
+  this env var is unset, sqlfluff falls back to the profile's own
+  default target (`dev`) and fails loudly on a missing `SNOWFLAKE_USER`
+  rather than silently linting against the wrong target — verified
+  behavior, not assumed.
+
 ## Environment / target safety
 
 Four targets exist in `profiles.yml`: `dev` (`DEV_ROLE`), `ci` (PR builds,
@@ -122,6 +133,16 @@ setup:
 - `.github/workflows/dbt_ci_teardown.yml` — drops a PR's `CI_ANALYTICS`
   scratch schema on merge or close (`dbt run-operation drop_ci_schema
   --target ci`).
+
+`dbt_test.yml` also runs a `lint` job, independent of `run-dbt` (no
+`needs:`, so a style failure surfaces without waiting on the build).
+Runs `black --check --diff` (no credentials needed) then
+`sqlfluff lint models/` against `--target ci` via
+`DBT_ENGINE_TARGET: ci`, reusing the same secrets `run-dbt` already has
+— no separate credentials for linting. It only checks, never fixes:
+`sqlfluff fix`/`black` (no `--check`) stay a local, human-reviewed step
+before pushing, same as the workflow already used for the SQLFluff
+cleanup PRs.
 
 ## Conventions (judgement calls the contracts files can't express)
 

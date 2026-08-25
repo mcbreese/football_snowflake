@@ -58,6 +58,13 @@ with player_appearances as (
     -- exclude those phantom rows rather than relying on a downstream filter.
     where
         ap.appearance_id is not null
+        -- LT02's expected indent inside this block depends on the rendered
+        -- length of {{ this }} below, which varies by target (confirmed:
+        -- claude_readonly and ci disagree on it, and disagree on *which*
+        -- line within the block is "wrong") - no single indent satisfies
+        -- every target, so LT02 is disabled for this block rather than
+        -- chasing a moving target.
+        -- noqa: disable=LT02
         {% if is_incremental() %}
             and ap.loaded_timestamp
             > (
@@ -67,6 +74,7 @@ with player_appearances as (
                 from {{ this }} as prev
             )
         {% endif %}
+        -- noqa: enable=LT02
 )
 
 select

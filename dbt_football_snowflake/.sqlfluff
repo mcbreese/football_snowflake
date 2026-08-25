@@ -9,7 +9,10 @@ indent_unit = space
 project_dir = .
 profiles_dir = .
 profile = dbt_football_snowflake
-target = claude_readonly
+# target intentionally not hardcoded here - it must vary by environment
+# (claude_readonly locally, ci in CI). Set via the DBT_ENGINE_TARGET env
+# var instead: an explicit value here would always win over any env var,
+# which is exactly what we don't want. See CLAUDE.md's Auth section.
 
 [sqlfluff:indentation]
 tab_space_size = 4

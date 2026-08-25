@@ -5,6 +5,11 @@
     on_schema_change='append_new_columns'
 ) }}
 
+-- LT02's expected indent below depends on the rendered length of {{ this }}
+-- in the incremental filter, which varies by target - confirmed the
+-- claude_readonly and ci targets disagree on it. Disabled for this model.
+-- noqa: disable=LT02
+
 with player_appearances as (
     select
         ap.appearance_player_sk,

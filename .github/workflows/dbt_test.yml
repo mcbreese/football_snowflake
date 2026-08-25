@@ -155,3 +155,58 @@ jobs:
       - name: Run dbt build (full)
         if: steps.build_mode.outputs.mode == 'full'
         run: uv run dbt build --target ci --profiles-dir .
+
+  # Runs independently of run-dbt (no `needs:`) so a style violation surfaces
+  # fast without waiting on the slower state-based build. Checks only -
+  # never runs `black`/`sqlfluff fix` here, since a job that rewrites files
+  # has no clean way to get those changes back into the PR branch without a
+  # bot-commit step. Reuses the same `ci`-target credentials run-dbt already
+  # has - no new secrets needed, just pointed at sqlfluff's dbt templater
+  # instead of a real build.
+  lint:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+
+    env:
+      SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
+      SNOWFLAKE_USER: ${{ secrets.SNOWFLAKE_USER }}
+      RSA_KEY_CONTENTS: ${{ secrets.RSA_KEY_CONTENTS }}
+      PK_PASSPHRASE: ${{ secrets.PK_PASSPHRASE }}
+      PK_PATH: "./rsa_key.p8"
+      DBT_CI_SCHEMA: "pr_${{ github.event.pull_request.number }}"
+      DBT_ENGINE_TARGET: ci
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+        with:
+          enable-cache: true
+
+      - name: Install dependencies
+        run: uv sync --locked
+
+      # No credentials or dbt compilation needed for this one - runs first
+      # so a pure style issue fails as fast as possible.
+      - name: Black --check
+        run: uv run black --check --diff main.py profiling/
+
+      - name: Write RSA Key to File
+        working-directory: ./dbt_football_snowflake
+        run: |
+          printf '%s\n' "$RSA_KEY_CONTENTS" > rsa_key.p8
+          chmod 600 rsa_key.p8
+
+      # sqlfluff's dbt templater needs dbt_utils (generate_surrogate_key
+      # etc.) installed to compile the project before it can lint anything.
+      - name: Install dbt packages
+        working-directory: ./dbt_football_snowflake
+        run: uv run dbt deps --profiles-dir .
+
+      - name: SQLFluff lint
+        working-directory: ./dbt_football_snowflake
+        run: uv run sqlfluff lint models/

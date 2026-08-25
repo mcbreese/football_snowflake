@@ -57,7 +57,7 @@ dbt_football_snowflake:
     # CLAUDE_PK_PATH/CLAUDE_PK_PASSPHRASE, not SNOWFLAKE_USER/PK_PATH/
     # PK_PASSPHRASE) so there's no chance of this target accidentally
     # picking up the personal credential, or vice versa. See
-    # snowflake/setup_claude_readonly_role.sql and .claude/snowflake_readonly.env.
+    # snowflake/setup_claude_readonly_role.sql and secrets/.env.readonly.
     claude_readonly:
       type: snowflake
       account: "{{ env_var('SNOWFLAKE_ACCOUNT') }}"

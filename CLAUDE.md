@@ -68,24 +68,38 @@ Two separate local credential files, deliberately not shared:
   holds `DEV_ROLE`/`CI_ROLE`/`PROD_ROLE`. This is for the user's own
   interactive use (VS Code's integrated terminal). Claude should not read
   or use this file.
-- `.claude/snowflake_readonly.env` — Claude's own credentials, a
-  completely separate Snowflake user (`CLAUDE_SERVICE`) that only ever
-  holds `CLAUDE_READONLY_ROLE` (see `snowflake/setup_claude_readonly_role.sql`).
-  Source it (`source .claude/snowflake_readonly.env`) before running
-  `--target claude_readonly`. Uses `CLAUDE_`-prefixed env var names
-  specifically so it can never collide with or get accidentally
-  substituted for the personal credential's env vars.
+- `secrets/.env.readonly` — a completely separate Snowflake user
+  (`CLAUDE_SERVICE`) that only ever holds `CLAUDE_READONLY_ROLE` (see
+  `snowflake/setup_claude_readonly_role.sql`). Despite the
+  `CLAUDE_`-prefixed env var names, this isn't Claude-exclusive — it's
+  the shared account for anyone's local SQLFluff/ad hoc dbt
+  compile/parse tooling too, since it's exactly the right (read-only,
+  Snowflake-enforced) privilege level for that job. The prefixed names
+  exist so this can never collide with or get accidentally substituted
+  for the personal credential's env vars, not to signal exclusivity.
 
-  For `sqlfluff` specifically (its `dbt` templater needs a target, not
-  just these connection vars), also `export DBT_ENGINE_TARGET=claude_readonly`.
-  `dbt_football_snowflake/.sqlfluff` deliberately does **not** hardcode
-  `target` in `[sqlfluff:templater:dbt]` — an explicit config value there
-  would always beat the env var, which is exactly wrong: CI needs the
-  same file to resolve to `ci` instead (see the `lint` job below). If
-  this env var is unset, sqlfluff falls back to the profile's own
-  default target (`dev`) and fails loudly on a missing `SNOWFLAKE_USER`
-  rather than silently linting against the wrong target — verified
-  behavior, not assumed.
+  No manual `source` needed — `uv run`'s `--env-file` flag loads it into
+  just that one command's subprocess (nothing persists in the shell
+  afterward, and it behaves identically in PowerShell and Git Bash,
+  since uv does the parsing, not the shell):
+  ```
+  cd dbt_football_snowflake
+  uv run --env-file ../secrets/.env.readonly sqlfluff lint models/
+  uv run --env-file ../secrets/.env.readonly dbt debug --target claude_readonly --profiles-dir .
+  ```
+  The file also sets `DBT_ENGINE_TARGET=claude_readonly`, which is what
+  `sqlfluff` actually needs (its `dbt` templater has no `--target` flag —
+  only an env var). `dbt_football_snowflake/.sqlfluff` deliberately does
+  **not** hardcode `target` in `[sqlfluff:templater:dbt]` — an explicit
+  config value there would always beat the env var, which is exactly
+  wrong: CI needs the same file to resolve to `ci` instead (see the
+  `lint` job below). If this env var is unset, sqlfluff falls back to
+  the profile's own default target (`dev`) and fails loudly on a missing
+  `SNOWFLAKE_USER` rather than silently linting against the wrong target
+  — verified behavior, not assumed. Because `--env-file` only affects
+  the one invocation, there's no risk of `DBT_ENGINE_TARGET` becoming a
+  silent ambient default for some unrelated bare `dbt` command later in
+  the same shell.
 
 ## Environment / target safety
 

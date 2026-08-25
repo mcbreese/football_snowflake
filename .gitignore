@@ -14,3 +14,9 @@ rsa_key.pub
 # Also the shared local credential for anyone's SQLFluff/ad hoc dbt use -
 # see secrets/.env.readonly and CLAUDE.md's Auth section.
 secrets/
+
+# Claude Code's own local project state - permission grants
+# (settings.local.json) and worktree checkouts (worktrees/, which can
+# contain nested .git dirs and shouldn't ever be tracked). Nothing in
+# here is meant to be shared or committed.
+.claude/

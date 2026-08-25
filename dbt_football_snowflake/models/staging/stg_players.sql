@@ -8,22 +8,23 @@ players as (
 
     select
         -- primary key
-        {{ dbt_utils.generate_surrogate_key(['player_id']) }} as player_sk, -- create surrogate key
+        -- create surrogate key
+        {{ dbt_utils.generate_surrogate_key(['player_id']) }} as player_sk,
         player_id,
         -- foreign key
         current_club_id,
         -- dimensions
-        name AS player_name,
-        country_of_citizenship AS nationality,
+        name as player_name,
+        country_of_citizenship as nationality,
         position,
         sub_position,
-        COALESCE(foot, 'Unknown') AS foot,
+        COALESCE(foot, 'Unknown') as foot,
         height_in_cm,
-        -- The date_of_birth is already a date type, but we cast it here for explicitness
-        -- to ensure consistency in our data contract.
-        cast(date_of_birth as date) as date_of_birth,
+        -- The date_of_birth is already a date type, but we cast it here
+        -- for explicitness to ensure consistency in our data contract.
+        CAST(date_of_birth as date) as date_of_birth,
         -- facts
-        DATEDIFF(YEAR, date_of_birth, current_date()) AS age_in_years,
+        DATEDIFF(year, date_of_birth, CURRENT_DATE()) as age_in_years,
         last_season,
         -- metadata
         loaded_timestamp,
@@ -33,5 +34,5 @@ players as (
 
 )
 
-select * 
+select *
 from players

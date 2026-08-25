@@ -1,6 +1,6 @@
-WITH transfers AS (
+with transfers as (
 
-    SELECT
+    select
         -- Transfer Keys and Facts
         tr.player_transfer_sk,
         tr.transfer_date,
@@ -14,20 +14,20 @@ WITH transfers AS (
         tr.to_club_id,
 
         -- Metadata
-        tr.loaded_timestamp AS transfer_loaded_timestamp,
-        tr.source_file AS transfer_source_file
+        tr.loaded_timestamp as transfer_loaded_timestamp,
+        tr.source_file as transfer_source_file
 
-    FROM {{ ref('stg_transfers') }} AS tr
+    from {{ ref('stg_transfers') }} as tr
 ),
 
-joined AS (
+joined as (
 
-    SELECT
+    select
         -- Primary Key
         tr.player_transfer_sk,
         -- Club Names
-        from_club.name AS from_club_name,
-        to_club.name AS to_club_name,
+        from_club.name as from_club_name,
+        to_club.name as to_club_name,
 
         -- Transfer Details (Facts)
         tr.transfer_date,
@@ -55,20 +55,20 @@ joined AS (
         tr.transfer_loaded_timestamp,
         tr.transfer_source_file
 
-    FROM transfers AS tr
-    
+    from transfers as tr
+
     -- Join to Player Details
-    LEFT JOIN {{ ref('stg_players') }} AS pl
-        ON tr.player_id = pl.player_id
-        
+    left join {{ ref('stg_players') }} as pl
+        on tr.player_id = pl.player_id
+
     -- Join to Club for 'From Club' Name
-    LEFT JOIN {{ ref('stg_clubs') }} AS from_club
-        ON tr.from_club_id = from_club.club_id
-        
+    left join {{ ref('stg_clubs') }} as from_club
+        on tr.from_club_id = from_club.club_id
+
     -- Join to Club for 'To Club' Name
-    LEFT JOIN {{ ref('stg_clubs') }} AS to_club
-        ON tr.to_club_id = to_club.club_id
+    left join {{ ref('stg_clubs') }} as to_club
+        on tr.to_club_id = to_club.club_id
 )
 
-SELECT * 
-FROM joined
+select *
+from joined

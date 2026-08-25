@@ -1,4 +1,4 @@
-SELECT
+select
     cl.club_sk,
     cl.club_id,
     cl.domestic_competition_id,
@@ -17,4 +17,4 @@ SELECT
     cl.loaded_timestamp,
     cl.source_file,
     cl.url
-FROM {{ ref('stg_clubs') }} AS cl
+from {{ ref('stg_clubs') }} as cl

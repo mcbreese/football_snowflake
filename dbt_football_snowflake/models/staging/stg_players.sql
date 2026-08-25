@@ -20,8 +20,8 @@ players as (
         sub_position,
         COALESCE(foot, 'Unknown') as foot,
         height_in_cm,
-        -- The date_of_birth is already a date type, but we cast it here for explicitness
-        -- to ensure consistency in our data contract.
+        -- The date_of_birth is already a date type, but we cast it here
+        -- for explicitness to ensure consistency in our data contract.
         CAST(date_of_birth as date) as date_of_birth,
         -- facts
         DATEDIFF(year, date_of_birth, CURRENT_DATE()) as age_in_years,

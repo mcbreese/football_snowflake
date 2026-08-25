@@ -29,8 +29,10 @@ games as (
         source_file
 
     from source as gm
-    -- Got a lot of missing clubs in my fct data - use an exists as skipping dq issue for personal project
-    where                 {{ exists_in_raw_clubs('gm.home_club_id') }}
+    -- Got a lot of missing clubs in my fct data - use an exists as skipping
+    -- dq issue for personal project
+    where
+        {{ exists_in_raw_clubs('gm.home_club_id') }}
         and {{ exists_in_raw_clubs('gm.away_club_id') }}
 
 )

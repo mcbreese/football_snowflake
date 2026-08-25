@@ -60,7 +60,12 @@ with player_appearances as (
         ap.appearance_id is not null
         {% if is_incremental() %}
             and ap.loaded_timestamp
-            > (select MAX(appearance_loaded_timestamp) from {{ this }})
+            > (
+                select
+                    MAX(prev.appearance_loaded_timestamp)
+                        as latest_loaded_timestamp
+                from {{ this }} as prev
+            )
         {% endif %}
 )
 

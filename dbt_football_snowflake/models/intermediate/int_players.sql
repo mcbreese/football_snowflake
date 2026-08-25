@@ -1,4 +1,4 @@
-SELECT
+select
     pl.player_sk,
     pl.player_id,
     pl.current_club_id,
@@ -13,4 +13,4 @@ SELECT
     pl.last_season,
     pl.loaded_timestamp,
     pl.source_file
-FROM {{ ref('stg_players') }} AS pl
+from {{ ref('stg_players') }} as pl

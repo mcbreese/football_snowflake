@@ -1,4 +1,4 @@
-SELECT
+select
     co.competition_sk,
     co.competition_id,
     co.country_id,
@@ -12,4 +12,4 @@ SELECT
     co.loaded_timestamp,
     co.source_file,
     co.url
-FROM {{ ref('stg_competitions') }} AS co
+from {{ ref('stg_competitions') }} as co

@@ -5,15 +5,14 @@
     on_schema_change='append_new_columns'
 ) }}
 
-WITH player_appearances AS (
-    SELECT ap.appearance_player_sk,
+with player_appearances as (
+    select
+        ap.appearance_player_sk,
         pl.player_name,
-        COALESCE(cl.name, 'Unknown')  AS club_name,
         pl.date_of_birth,
         ap.appearance_date,
-        -- facts
-        DATEDIFF(YEAR, pl.date_of_birth, ap.appearance_date) AS appearance_age_in_years,
         gm.season,
+        -- facts
         ap.yellow_cards,
         ap.red_cards,
         ap.goals,
@@ -21,48 +20,54 @@ WITH player_appearances AS (
         ap.minutes_played,
         gm.home_club_goals,
         gm.away_club_goals,
-        CASE
-            WHEN ap.player_club_id = gm.home_club_id THEN 'home'
-            ELSE 'away'
-        END AS home_away,
-        CASE
-            WHEN gm.home_club_goals > gm.away_club_goals THEN 'home'
-            WHEN gm.home_club_goals < gm.away_club_goals THEN 'away'
-            ELSE 'draw'
-        END AS outcome,
-        co.name AS competition_name,
-        co.type AS competition_type,
-        -- foreign keys
+        co.name as competition_name,
+        co.type as competition_type,
         pl.player_id,
-        pl.current_club_id AS club_id,
+        pl.current_club_id as club_id,
         gm.game_id,
         ap.appearance_id,
+        -- foreign keys
         gm.home_club_id,
         gm.away_club_id,
+        ap.loaded_timestamp as appearance_loaded_timestamp,
+        COALESCE(cl.name, 'Unknown') as club_name,
+        DATEDIFF(year, pl.date_of_birth, ap.appearance_date)
+            as appearance_age_in_years,
+        case
+            when ap.player_club_id = gm.home_club_id then 'home'
+            else 'away'
+        end as home_away,
         -- metdata
-        ap.loaded_timestamp AS appearance_loaded_timestamp
-	-- Ref downstream models for best practice build in sequence
-    FROM {{ ref('stg_players') }} AS pl
-    LEFT JOIN {{ ref('stg_appearances') }} AS ap
-        ON pl.player_id = ap.player_id
-    LEFT JOIN {{ ref('stg_clubs') }} AS cl
-        ON ap.player_club_id = cl.club_id
-    LEFT JOIN {{ ref('stg_competitions') }} AS co
-        ON ap.competition_id = co.competition_id
-    LEFT JOIN {{ ref('stg_games') }} AS gm
-        ON ap.game_id = gm.game_id
+        case
+            when gm.home_club_goals > gm.away_club_goals then 'home'
+            when gm.home_club_goals < gm.away_club_goals then 'away'
+            else 'draw'
+        end as outcome
+    -- Ref downstream models for best practice build in sequence
+    from {{ ref('stg_players') }} as pl
+    left join {{ ref('stg_appearances') }} as ap
+        on pl.player_id = ap.player_id
+    left join {{ ref('stg_clubs') }} as cl
+        on ap.player_club_id = cl.club_id
+    left join {{ ref('stg_competitions') }} as co
+        on ap.competition_id = co.competition_id
+    left join {{ ref('stg_games') }} as gm
+        on ap.game_id = gm.game_id
     -- A player with no appearances still matches the LEFT JOIN above with every
     -- appearance-derived column NULL; this model is one row per appearance, so
     -- exclude those phantom rows rather than relying on a downstream filter.
-    WHERE ap.appearance_id IS NOT NULL
-    {% if is_incremental() %}
-    AND ap.loaded_timestamp > (SELECT MAX(appearance_loaded_timestamp) FROM {{ this }})
-    {% endif %}
+    where
+        ap.appearance_id is not null
+        {% if is_incremental() %}
+            and ap.loaded_timestamp
+            > (select MAX(appearance_loaded_timestamp) from {{ this }})
+        {% endif %}
 )
 
-SELECT
+select
     -- primary key
-    {{ dbt_utils.generate_surrogate_key(['player_id', 'appearance_id']) }} AS player_appearance_sk,
+    {{ dbt_utils.generate_surrogate_key(['player_id', 'appearance_id']) }}
+        as player_appearance_sk,
     player_name,
     club_name,
     date_of_birth,
@@ -78,12 +83,12 @@ SELECT
     away_club_goals,
     home_away,
     outcome,
-    CASE
-        WHEN outcome = 'draw' THEN 'draw'
-        WHEN home_away = outcome THEN 'player_win'
-        WHEN home_away <> outcome THEN 'player_loss'
-        ELSE 'error'
-    END AS player_win_loss,
+    case
+        when outcome = 'draw' then 'draw'
+        when home_away = outcome then 'player_win'
+        when home_away <> outcome then 'player_loss'
+        else 'error'
+    end as player_win_loss,
     competition_name,
     competition_type,
     player_id,
@@ -94,4 +99,4 @@ SELECT
     away_club_id,
     -- metdata
     appearance_loaded_timestamp
-FROM player_appearances
+from player_appearances

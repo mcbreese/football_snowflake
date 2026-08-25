@@ -22,7 +22,7 @@
 --   openssl genrsa 2048 | openssl pkcs8 -topk8 -inform PEM -out claude_readonly_key.p8 -nocrypt
 --   openssl rsa -in claude_readonly_key.p8 -pubout -out claude_readonly_key.pub
 -- The private key stays local, gitignored, never committed - see
--- .claude/claude_readonly_key.p8.
+-- secrets/claude_readonly_key.p8.
 
 USE ROLE SECURITYADMIN;
 

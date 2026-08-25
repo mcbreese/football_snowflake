@@ -7,11 +7,14 @@ transfer/performance data, built to production standards as a job-search
 portfolio piece, not a throwaway learning repo. Treat it as if it runs
 unattended in CI and is relied on by real stakeholders.
 
-Currently mid-migration from Databricks to Snowflake (started 23/07/2026).
-`databricks.yml` and the Databricks VS Code config are legacy. **Do not
-reference, update, or "helpfully" restore Databricks config or tooling**,
-even if you find it in the tree, it is being phased out, not the active
-target.
+Migrated from Databricks to Snowflake (started 23/07/2026, config removed
+25/08/2026 - `databricks.yml`, the local `.databricks/` bundle state, and
+the stale `.databricks` `.gitignore` entry are gone). Databricks is not
+the active target and never should be reintroduced. The Databricks VS
+Code extension's own settings may still linger in `.vscode/settings.json`
+- Claude shouldn't touch that file (see Auth), so removing those is on
+the user. `README.md`'s dated changelog entries from the Databricks era
+are historical record, not config - leave them alone.
 
 ## Running dbt
 

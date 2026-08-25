@@ -5,6 +5,11 @@
     on_schema_change='append_new_columns'
 ) }}
 
+-- LT02's expected indent below depends on the rendered length of {{ this }}
+-- in the incremental filter, which varies by target - confirmed the
+-- claude_readonly and ci targets disagree on it. Disabled for this model.
+-- noqa: disable=LT02
+
 with player_appearances as (
     select
         ap.appearance_player_sk,
@@ -58,16 +63,6 @@ with player_appearances as (
     -- exclude those phantom rows rather than relying on a downstream filter.
     where
         ap.appearance_id is not null
-        -- LT02's expected indent from here on depends on the rendered
-        -- length of {{ this }} below, which varies by target (confirmed:
-        -- claude_readonly and ci disagree with each other, and each retry
-        -- shifts *which* line is "wrong" - including a disable/enable
-        -- boundary comment placed right after the block). No single
-        -- indent satisfies every target, so LT02 is disabled for the rest
-        -- of this file rather than chasing a moving target across CI runs
-        -- I can't reproduce locally (ci-target credentials aren't
-        -- available to Claude - see CLAUDE.md's Auth section).
-        -- noqa: disable=LT02
         {% if is_incremental() %}
             and ap.loaded_timestamp
             > (

@@ -1,0 +1,57 @@
+# Local pre-commit hooks for football_snowflake - instant local feedback
+# before a commit is created, on top of (not instead of) the same checks
+# CI already runs in dbt_test.yml's `lint` job. If you're new to
+# pre-commit: it only runs a hook when a file matching that hook's
+# `files:` pattern is part of the commit, and only looks at what's staged
+# (not your whole working tree) - both are the framework's own default
+# behaviour, not something configured here.
+#
+# Every hook below is `repo: local` / `language: system` or `script`,
+# meaning it shells out via `uv run` to this project's own uv-managed
+# virtualenv, instead of the more common pre-commit pattern of pointing
+# at an external repo (e.g. the official psf/black or sqlfluff/sqlfluff
+# mirrors) pinned to a `rev:` that pre-commit installs into its own
+# isolated, hook-specific environment. That's deliberate here, not a
+# shortcut:
+#   - sqlfluff's dbt templater (see dbt_football_snowflake/.sqlfluff)
+#     needs dbt-snowflake, sqlfluff-templater-dbt, AND this project's
+#     installed dbt_packages/ (from `dbt deps`) all present together to
+#     compile a single .sql file. Getting the official sqlfluff mirror to
+#     do that means listing all of it under `additional_dependencies` by
+#     hand, in a second place, with its own chance of drifting out of
+#     sync with what's actually pinned in pyproject.toml/uv.lock and
+#     tested in CI.
+#   - Routing everything through `uv run` instead means there is exactly
+#     one place versions are pinned for this whole project, and these
+#     hooks are guaranteed to run the same tool versions as CI.
+repos:
+  - repo: local
+    hooks:
+      - id: black
+        name: black
+        # The only Python files in this repo (main.py, profiling/) already
+        # live at the repo root, same as pyproject.toml's [tool.black] -
+        # no cwd changes needed here, unlike the two hooks below.
+        entry: uv run black
+        language: system
+        types: [python]
+
+      - id: sqlfluff-lint
+        name: sqlfluff lint (dbt templater)
+        # See dbt_football_snowflake/.hooks/sqlfluff-lint.sh for why this
+        # has to be a wrapper script rather than a plain `entry:` command.
+        entry: dbt_football_snowflake/.hooks/sqlfluff-lint.sh
+        language: script
+        files: ^dbt_football_snowflake/models/.*\.sql$
+
+      - id: dbt-parse
+        name: dbt parse (catches broken refs, invalid yml, bad jinja)
+        entry: dbt_football_snowflake/.hooks/dbt-parse.sh
+        language: script
+        # dbt has no "parse just this one file" mode - it always parses
+        # the whole project graph. This `files:` pattern only decides
+        # *whether* that runs for a given commit (e.g. skipped entirely
+        # for a docs/README-only commit); it can't scope what dbt parse
+        # itself looks at once it does run.
+        files: ^dbt_football_snowflake/(models|macros|seeds|snapshots|analyses|dbt_project\.yml|packages\.yml)
+        pass_filenames: false

@@ -1,0 +1,8 @@
+# Shell scripts need real LF line endings regardless of a checkout's
+# core.autocrlf - a CRLF-mangled shebang line breaks execution outright,
+# and mid-script \r characters can silently corrupt string comparisons
+# even when the script still runs. Without this, Windows clones with
+# core.autocrlf=true would check these out as CRLF and break the
+# pre-commit hooks that shell out to them
+# (dbt_football_snowflake/.hooks/*.sh).
+*.sh text eol=lf

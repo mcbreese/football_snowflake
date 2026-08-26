@@ -7,6 +7,58 @@ The main reason this project exists was to force myself to learn dbt Core. Every
 
 This section documents my journey building this analytics platform, highlighting technical decisions, encountered challenges, and successful implementations across the PySpark ETL and dbt transformation layers.
 
+## Tech Stack
+
+- **Transformation:** dbt Core, on Snowflake
+- **Orchestration/CI-CD:** GitHub Actions (PR checks, prod deploy, scratch-schema teardown)
+- **Quality:** dbt data contracts (schema enforced per model, not just gold), dbt tests, sqlfluff + black
+- **Tooling:** Python 3.12, managed with `uv`
+- **Infra-as-code:** Snowflake roles/databases provisioned via checked-in SQL (`snowflake/`), not click-ops
+
+## Repository Structure
+
+```
+football_snowflake/
+├── dbt_football_snowflake/        # the dbt project itself
+│   ├── models/
+│   │   ├── staging/                 # stg_  - one per source table, light cleaning
+│   │   ├── intermediate/            # int_  - joins/business logic between staging models
+│   │   ├── marts/
+│   │   │   ├── dimensions/            # dim_ - gold-layer dimensions
+│   │   │   └── facts/                 # fct_ - gold-layer fact tables
+│   │   └── exposures.yml            # downstream consumers of the gold layer
+│   ├── macros/, seeds/, snapshots/, tests/, analyses/
+│   ├── dbt_project.yml              # per-layer schema/materialization/tags config
+│   ├── profiles.yml                 # dev/ci/prod/claude_readonly connection profiles - references env vars, no secrets
+│   └── .sqlfluff                    # SQL lint config (dbt templater)
+├── .github/workflows/
+│   ├── dbt_test.yml                 # PR checks - Slim CI (state:modified+ --defer) against a throwaway schema
+│   ├── dbt_deploy.yml               # push:main - the real prod deploy, publishes the manifest PRs diff against
+│   └── dbt_ci_teardown.yml          # drops a PR's scratch schema once it's merged or closed
+├── snowflake/                      # checked-in SQL for account/role/database setup
+├── profiling/                      # one-off data profiling scripts + generated ydata-profiling reports
+├── main.py                         # entry point for the profiling scripts
+├── pyproject.toml / uv.lock        # Python dependencies
+└── CLAUDE.md                       # working agreement/conventions for AI-assisted development on this repo
+```
+
+Not committed, by design: `secrets/` and `rsa_key.p8` (real credentials/keys), `dbt_football_snowflake/{target,dbt_packages,logs,state}/` (generated at build/compile time), `.vscode/settings.json` (personal IDE credentials).
+
+## How It Works
+
+**Data flow:** raw Transfermarkt Kaggle CSVs → manually loaded into Snowflake (`RAW.FOOTBALL`) → dbt staging → intermediate → marts (gold). Every model — staging included, not just gold — has its schema enforced by a one-per-model data contract file (`models/<layer>/<model>.yml`).
+
+**Environments:** four dbt targets in `profiles.yml`, each backed by its own Snowflake role: `dev` (interactive local development), `ci` (PR builds, a throwaway schema per PR), `prod` (the real deploy), and `claude_readonly` (a genuinely read-only role, enforced by Snowflake itself, for local linting/compiling — not just a convention).
+
+**CI/CD**, all under `.github/workflows/`:
+- Every PR runs `dbt_test.yml`, which builds only the models that changed plus their downstream dependents (dbt's `state:modified+`) against the last successful prod deploy's manifest, rather than rebuilding the whole project on every PR.
+- Merging to `main` triggers `dbt_deploy.yml` — the actual write to production — which also publishes the manifest the next PR's Slim CI comparison needs.
+- `dbt_ci_teardown.yml` drops a PR's scratch schema once it's merged or closed, so nothing lingers in Snowflake.
+
+**Governance:** GitHub branch protection and Dependabot on `main`, CODEOWNERS, a dedicated read-only Snowflake role for reporting/BI use, and Snowflake role/database setup checked in as SQL (`snowflake/`) rather than configured by hand in the UI.
+
+The timeline below is a running first-person log of how the project actually got here, warts and all — kept as a historical record rather than rewritten after the fact.
+
 ## Project Logbook Timeline
 
 | **Date** | **Focus Area** | **Action & Outcome** | 

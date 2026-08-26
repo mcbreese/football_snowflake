@@ -6,9 +6,22 @@ name: dbt Prod Deploy
 # dbt_test.yml's PR check - so it doesn't reintroduce the double-build cost
 # problem that push:main trigger was originally removed for. Its manifest
 # artifact is what dbt_test.yml diffs PRs against via state:modified+.
+#
+# Deploys selectively (state:modified+ against this workflow's own last
+# successful run), not a full rebuild - this only covers deploying merged
+# code changes cheaply. Data freshness for unchanged models (in particular
+# int_player_appearances, which is incremental and won't be reselected
+# just because time has passed) is an explicitly deferred phase 2: a
+# separate schedule/dependency-triggered full build, not yet implemented.
+# See the project's CD-redesign notes - this is a known, accepted gap
+# until that phase 2 job exists, not an oversight.
 on:
   push:
     branches: [main]
+
+permissions:
+  contents: read
+  actions: read # needed to find this workflow's own last successful run
 
 jobs:
   deploy:
@@ -67,15 +80,124 @@ jobs:
       - name: Install dbt packages
         run: uv run dbt deps --profiles-dir .
 
-      - name: Run dbt build (prod)
+      # --- Selective deploy: find this workflow's own last successful run
+      # so we can diff against its manifest via state:modified+. Falls back
+      # to a full build below if none is found (first-ever run, or the
+      # artifact expired/missing). ---
+
+      - name: Find previous successful deploy run
+        id: find_run
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const runs = await github.rest.actions.listWorkflowRuns({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'dbt_deploy.yml',
+              branch: 'main',
+              status: 'success',
+              per_page: 1,
+            });
+            if (runs.data.workflow_runs.length === 0) {
+              core.info('No previous successful dbt_deploy.yml run found - will fall back to a full build.');
+              core.setOutput('run_id', '');
+            } else {
+              core.setOutput('run_id', String(runs.data.workflow_runs[0].id));
+            }
+
+      - name: Download previous manifest
+        if: steps.find_run.outputs.run_id != ''
+        continue-on-error: true # missing/expired artifact -> fall back to full build, don't hard-fail
+        uses: actions/download-artifact@v4
+        with:
+          name: prod-manifest
+          path: ./dbt_football_snowflake/state
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: ${{ steps.find_run.outputs.run_id }}
+
+      - name: Determine build mode
+        id: build_mode
+        run: |
+          if [ -f ./state/manifest.json ]; then
+            echo "mode=state" >> "$GITHUB_OUTPUT"
+          else
+            echo "mode=full" >> "$GITHUB_OUTPUT"
+          fi
+
+      # Deploy only what changed + its downstream dependents. No --defer:
+      # this runs for real against prod, so unselected refs already
+      # resolve correctly to their existing PRD_ANALYTICS relations.
+      - name: Run dbt build (prod, selective)
+        if: steps.build_mode.outputs.mode == 'state'
+        run: uv run dbt build --target prod --select state:modified+ --state ./state --profiles-dir .
+
+      # No prior manifest available - build everything, same as before this
+      # change.
+      - name: Run dbt build (prod, full)
+        if: steps.build_mode.outputs.mode == 'full'
         run: uv run dbt build --target prod --profiles-dir .
 
       # Only reached if the build above succeeded, so a failed prod build
       # never publishes a manifest representing broken/partial state for
-      # PR runs to diff against.
+      # PR runs (or the next deploy) to diff against.
       - name: Upload manifest artifact
         uses: actions/upload-artifact@v4
         with:
           name: prod-manifest
           path: dbt_football_snowflake/target/manifest.json
+          retention-days: 90
+
+  # Regenerates dbt docs from prod state after a successful deploy. Not
+  # published anywhere (no GitHub Pages) - just the generated site +
+  # catalog as a downloadable artifact, per user's explicit preference.
+  docs:
+    needs: deploy
+    runs-on: ubuntu-latest
+
+    env:
+      SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
+      SNOWFLAKE_USER: ${{ secrets.SNOWFLAKE_USER }}
+      RSA_KEY_CONTENTS: ${{ secrets.RSA_KEY_CONTENTS }}
+      PK_PASSPHRASE: ${{ secrets.PK_PASSPHRASE }}
+      PK_PATH: "./rsa_key.p8"
+
+    defaults:
+      run:
+        working-directory: ./dbt_football_snowflake
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+        with:
+          enable-cache: true
+
+      - name: Install dependencies
+        working-directory: .
+        run: uv sync --locked
+
+      - name: Write RSA Key to File
+        run: |
+          printf '%s\n' "$RSA_KEY_CONTENTS" > rsa_key.p8
+          chmod 600 rsa_key.p8
+
+      - name: Install dbt packages
+        run: uv run dbt deps --profiles-dir .
+
+      # Queries prod's information schema for the catalog, so this needs
+      # real prod credentials - same target the deploy job just wrote to.
+      - name: Generate dbt docs
+        run: uv run dbt docs generate --target prod --profiles-dir .
+
+      - name: Upload dbt docs artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dbt-docs
+          path: |
+            dbt_football_snowflake/target/index.html
+            dbt_football_snowflake/target/manifest.json
+            dbt_football_snowflake/target/catalog.json
+            dbt_football_snowflake/target/run_results.json
           retention-days: 90

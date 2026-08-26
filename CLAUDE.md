@@ -51,7 +51,7 @@ adding models.
 
 Every model enforces its own schema via a one-per-model contract file
 (`models/<layer>/<model>.yml`, e.g. `models/staging/stg_clubs.yml`,
-`models/gold/facts/fct_player_transfers.yml`) with `contract.enforced:
+`models/marts/facts/fct_player_transfers.yml`) with `contract.enforced:
 true` set individually — staging and intermediate models are contracted
 too, not just gold. Sources are declared in
 `models/staging/sources/stg_sources.yml`, exposures in

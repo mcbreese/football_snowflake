@@ -30,6 +30,14 @@ clean-targets:         # directories to be removed by `dbt clean`
 flags:
   use_materialization_v2: True # Added this in as terminal output said it was new
 
+# dbt_project_evaluator's tests default to severity: error, which would hard-fail
+# a build on any violation. Starting at warn for the first assessment pass so the
+# build completes and produces a full list of findings instead of stopping at the
+# first one - see CLAUDE.md for how findings get reviewed.
+vars:
+  dbt_project_evaluator:
+    severity: warn
+
 # Configuring models
 # Full documentation: https://docs.getdbt.com/docs/configuring-models
 
@@ -37,6 +45,13 @@ flags:
 # directory as views. These settings can be overridden in the individual model
 # files using the `{{ config(...) }}` macro.
 models:
+  # dbt_project_evaluator's own diagnostic models get their own schema so they
+  # don't land mixed in with real staging/intermediate/gold models - resolves to
+  # DEV_ANALYTICS.football_dbt_project_evaluator under dev (see
+  # macros/generate_schema_name.sql for exactly how).
+  dbt_project_evaluator:
+    +schema: dbt_project_evaluator
+
   dbt_football_snowflake:
     +persist_docs: # Configuration for pushing dbt documentation to the database
       relation: true # Push the model's description (relation) as a comment on the table/view
@@ -57,9 +72,15 @@ models:
       +docs:
         node_color: "#A0A0A0" # silver color
 
-    gold:
+    marts:
       +tags: ["gold", "marts"] # all marts should be tagged with minimum ["silver", "marts"]
       +materialized: table # mart/gold best practice is tbl
+      # Deliberately still "gold", not "marts" - this is a live Snowflake schema
+      # name (DEV_ANALYTICS.football_gold / PRD_ANALYTICS.football_gold), not
+      # just a folder label. Renaming it would orphan existing prod tables
+      # under the old name rather than actually moving them. The folder/config
+      # key above is renamed to match dbt ecosystem convention; the schema
+      # itself is a separate, deliberately untouched decision.
       +schema: gold
       +docs:
         node_color: "#FFD700" # gold color

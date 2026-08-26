@@ -1,4 +1,8 @@
 packages:
-  - package: dbt-labs/dbt_utils
+  - name: dbt_utils
+    package: dbt-labs/dbt_utils
     version: 1.4.1
-sha1_hash: dd1e1feb2d2bbce79e7a255cd309a60e6548df0b
+  - name: dbt_project_evaluator
+    package: dbt-labs/dbt_project_evaluator
+    version: 1.3.4
+sha1_hash: 7cdf4cc85dbb27e423190d1c38140b6e2b9556b1

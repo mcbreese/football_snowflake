@@ -1,5 +1,9 @@
 
 logs/
+# uv-managed virtualenv - .venv/pyvenv.cfg was tracked by accident since
+# the very first commit (it embeds a machine-specific absolute path plus
+# the local Python version, neither of which belong in the repo).
+.venv/
 # Ignore VS Code workspace settings containing secrets
 .vscode/
 /.vscode

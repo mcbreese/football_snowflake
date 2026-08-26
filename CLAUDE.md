@@ -161,6 +161,37 @@ Runs `black --check --diff` (no credentials needed) then
 before pushing, same as the workflow already used for the SQLFluff
 cleanup PRs.
 
+## Pre-commit hooks
+
+`.pre-commit-config.yaml` runs `black`, `sqlfluff-lint`, and a new
+`dbt-parse` check locally before a commit is created — an earlier,
+cheaper checkpoint than CI, not a replacement for it; `dbt_test.yml`'s
+`lint` job still runs the same `black`/`sqlfluff` checks independently on
+every PR. One-time local setup after cloning: `uv run pre-commit install`
+(writes to this clone's own `.git/hooks/pre-commit`, not tracked by git —
+every clone needs to run it once).
+
+All three hooks are `repo: local` / `language: system`-or-`script` hooks
+that shell out via `uv run` to this project's own venv, not the more
+common pattern of pointing at an external repo pinned to its own `rev:`.
+`sqlfluff`'s dbt templater needs `dbt-snowflake`, `sqlfluff-templater-dbt`,
+and this project's installed `dbt_packages/` all present together to
+compile a single model — routing through `uv run` means there's exactly
+one place versions are pinned (`pyproject.toml`/`uv.lock`), matching what
+CI already tests against, instead of a second pinned copy that can drift.
+See `.pre-commit-config.yaml` and `dbt_football_snowflake/.hooks/*.sh` for
+the full reasoning in comments.
+
+`sqlfluff-lint` and `dbt-parse` both authenticate as `claude_readonly` via
+`secrets/.env.readonly` (see Auth) — meaning both need Snowflake reachable
+and that credential file present for **every** commit touching dbt files,
+not just at PR/CI time. This is a deliberate hard-fail, no offline
+fallback: `git commit --no-verify` is the manual escape hatch if genuinely
+needed. Both hooks also assume `dbt_packages/` is already installed
+(`dbt deps`) rather than re-running it on every commit — if you've just
+edited `packages.yml` and forgotten to re-run `dbt deps`, you'll see dbt's
+normal missing-package error.
+
 ## Conventions (judgement calls the contracts files can't express)
 
 - Surrogate keys via `dbt_utils.generate_surrogate_key`, never natural keys

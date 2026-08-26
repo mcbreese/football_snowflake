@@ -3,6 +3,7 @@ version: 2
 models:
   - name: fct_player_transfers
     config:
+      access: public
       meta:
         owner: "Analytics / Data Science"
         usage: "Primary Mart for Player Scouting and Trend Analysis"

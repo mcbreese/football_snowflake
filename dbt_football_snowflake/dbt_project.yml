@@ -72,9 +72,15 @@ models:
       +docs:
         node_color: "#A0A0A0" # silver color
 
-    gold:
+    marts:
       +tags: ["gold", "marts"] # all marts should be tagged with minimum ["silver", "marts"]
       +materialized: table # mart/gold best practice is tbl
+      # Deliberately still "gold", not "marts" - this is a live Snowflake schema
+      # name (DEV_ANALYTICS.football_gold / PRD_ANALYTICS.football_gold), not
+      # just a folder label. Renaming it would orphan existing prod tables
+      # under the old name rather than actually moving them. The folder/config
+      # key above is renamed to match dbt ecosystem convention; the schema
+      # itself is a separate, deliberately untouched decision.
       +schema: gold
       +docs:
         node_color: "#FFD700" # gold color

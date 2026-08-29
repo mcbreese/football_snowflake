@@ -11,10 +11,9 @@ name: dbt Prod Deploy
 # successful run), not a full rebuild - this only covers deploying merged
 # code changes cheaply. Data freshness for unchanged models (in particular
 # int_player_appearances, which is incremental and won't be reselected
-# just because time has passed) is an explicitly deferred phase 2: a
-# separate schedule/dependency-triggered full build, not yet implemented.
-# See the project's CD-redesign notes - this is a known, accepted gap
-# until that phase 2 job exists, not an oversight.
+# just because time has passed) is handled separately by
+# dbt_scheduled.yml, a weekly full `dbt build` against prod - see that
+# workflow for details.
 on:
   push:
     branches: [main]

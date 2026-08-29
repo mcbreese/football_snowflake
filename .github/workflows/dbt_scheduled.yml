@@ -1,0 +1,90 @@
+# Weekly full rebuild against prod, independent of merges to main. This is
+# the phase 2 job referenced in dbt_deploy.yml's comments: dbt_deploy.yml
+# only deploys state:modified+ on push to main, so an incremental model
+# like int_player_appearances never gets reselected just because time has
+# passed and its source data has moved. This job closes that gap by
+# running a full `dbt build` on a schedule, regardless of whether any code
+# changed.
+#
+# Deliberately a separate workflow from dbt_deploy.yml rather than a second
+# trigger on it: the two have different semantics (deploy merged code
+# changes cheaply, vs. periodically refresh everything for data drift) and
+# different build modes (selective vs. full), so keeping them apart avoids
+# tangling that logic together in one file.
+name: dbt Weekly Scheduled Build
+
+permissions:
+  contents: read
+  actions: read # needed for dbt_test.yml to find/download this run's manifest artifact
+
+on:
+  schedule:
+    # Every Monday at 04:00 UTC. Cron is UTC-only; adjust here if the
+    # desired local time changes.
+    - cron: "0 4 * * 1"
+  # Lets the job be triggered manually from the Actions tab without
+  # waiting for the next scheduled run (e.g. to backfill after a source
+  # data reload).
+  workflow_dispatch:
+
+jobs:
+  scheduled-build:
+    runs-on: ubuntu-latest
+
+    env:
+      SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
+      SNOWFLAKE_USER: ${{ secrets.SNOWFLAKE_USER }}
+      RSA_KEY_CONTENTS: ${{ secrets.RSA_KEY_CONTENTS }}
+      PK_PASSPHRASE: ${{ secrets.PK_PASSPHRASE }}
+      PK_PATH: "./rsa_key.p8"
+
+    defaults:
+      run:
+        working-directory: ./dbt_football_snowflake
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+        with:
+          enable-cache: true
+
+      - name: Install dependencies
+        working-directory: .
+        run: uv sync --locked
+
+      - name: Write RSA Key to File
+        run: |
+          printf '%s\n' "$RSA_KEY_CONTENTS" > rsa_key.p8
+          chmod 600 rsa_key.p8
+          ls -la rsa_key.p8
+
+      - name: Check dbt connection
+        run: uv run dbt debug --target prod --profiles-dir .
+
+      - name: Install dbt packages
+        run: uv run dbt deps --profiles-dir .
+
+      # Full build, unconditionally - no state:modified+ selection here.
+      # The whole point of this job is to refresh models that wouldn't be
+      # reselected by a code-change diff (e.g. incremental models against
+      # moved source data).
+      - name: Run dbt build (prod, full)
+        run: uv run dbt build --target prod --profiles-dir .
+
+      # Publishes under the same artifact name dbt_deploy.yml uses, since
+      # this build is against the same prod state and, being a full build,
+      # is if anything a more complete picture of it. dbt_test.yml's
+      # find_run step checks both workflows' run histories and picks
+      # whichever succeeded most recently, so PRs diff against the
+      # freshest available prod manifest rather than always dbt_deploy.yml's.
+      # Only reached if the build above succeeded, so a failed scheduled
+      # build never publishes a manifest representing broken/partial state.
+      - name: Upload manifest artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: prod-manifest
+          path: dbt_football_snowflake/target/manifest.json
+          retention-days: 90

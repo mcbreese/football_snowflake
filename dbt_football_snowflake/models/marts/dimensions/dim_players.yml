@@ -5,7 +5,7 @@ models:
     config:
       meta:
         owner: "Analytics Department"
-        usage: "Club reference table for joining to facts"
+        usage: "Player reference table for joining to facts"
       materialized: table
       contract:
         enforced: true

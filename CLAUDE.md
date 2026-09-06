@@ -130,7 +130,7 @@ followed convention.
 
 ## CI
 
-Three workflows, each with a distinct role/target — see
+Four workflows, each with a distinct role/target — see
 `snowflake/setup_ci_prod_roles.sql` for the underlying Snowflake role/db
 setup:
 
@@ -138,15 +138,29 @@ setup:
   Builds only `state:modified+` (changed models + downstream dependents),
   deferring unbuilt refs to the last successful prod state via `--defer
   --state`. Falls back to a full build if no prod manifest is available yet
-  (first run, or an expired/missing artifact). Each PR gets its own flat
-  scratch schema (`CI_ANALYTICS.pr_<n>`, see
-  `macros/generate_schema_name.sql`).
+  (first run, or an expired/missing artifact). The manifest it diffs
+  against is whichever of `dbt_deploy.yml` or `dbt_scheduled.yml` most
+  recently succeeded (picked by comparing both workflows' run histories),
+  not always `dbt_deploy.yml` — either can hold the freshest true picture
+  of prod state. Each PR gets its own flat scratch schema
+  (`CI_ANALYTICS.pr_<n>`, see `macros/generate_schema_name.sql`).
 - `.github/workflows/dbt_deploy.yml` — the actual prod deploy, triggered on
   `push: main` (i.e. only after a PR has already merged and passed
   `dbt_test.yml` — this doesn't double the per-merge build cost, it's doing
   a genuinely different thing: writing to `PRD_ANALYTICS` via `--target
   prod`, then publishing `target/manifest.json` as a `prod-manifest`
-  artifact for `dbt_test.yml` to diff PRs against).
+  artifact for `dbt_test.yml` to diff PRs against). Selective
+  (`state:modified+` against its own last successful run) — covers merged
+  code changes only, not data freshness for unchanged models.
+- `.github/workflows/dbt_scheduled.yml` — weekly full `dbt build --target
+  prod` (Mondays 04:00 UTC, cron `0 4 * * 1`; also `workflow_dispatch` for
+  manual runs), independent of merges. This is what refreshes models that
+  `dbt_deploy.yml`'s selective build wouldn't reselect just because time
+  passed and source data moved — in particular `int_player_appearances`,
+  which is incremental. Also publishes its own `prod-manifest` artifact
+  (same name as `dbt_deploy.yml`'s), since a full build is, if anything, a
+  more complete picture of prod state — this is what `dbt_test.yml`'s
+  "most recently succeeded" comparison is for.
 - `.github/workflows/dbt_ci_teardown.yml` — drops a PR's `CI_ANALYTICS`
   scratch schema on merge or close (`dbt run-operation drop_ci_schema
   --target ci`).

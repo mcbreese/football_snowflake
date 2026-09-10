@@ -4,9 +4,9 @@
 --
 -- Background: the manual CSV load process put this data into
 -- PRD_ANALYTICS instead of DEV_RAW (now RAW) at some point before this
--- session - discovered while running setup_ci_prod_roles.sql, whose
--- `ALTER SCHEMA RAW.PUBLIC RENAME TO FOOTBALL` failed because the raw
--- data was never actually in RAW at all. All 10 tables (7 currently used
+-- session - discovered while running ../roles/setup_ci_prod_roles.sql,
+-- whose `ALTER SCHEMA RAW.PUBLIC RENAME TO FOOTBALL` failed because the
+-- raw data was never actually in RAW at all. All 10 tables (7 currently used
 -- as dbt sources, plus raw_club_games/raw_game_events/raw_game_lineups
 -- which aren't wired into stg_sources.yml yet but are part of the same
 -- Transfermarkt dataset) are confirmed present in PRD_ANALYTICS.FOOTBALL.
@@ -16,10 +16,11 @@
 -- exactly as they are.
 --
 -- NOT run by dbt or CI - run manually, same as the other snowflake/*.sql
--- scripts. Run this BEFORE the rest of setup_ci_prod_roles.sql if you
--- haven't finished it yet (RAW.FOOTBALL needs to exist first - either run
--- that script's section 3 up to `CREATE SCHEMA IF NOT EXISTS RAW.FOOTBALL`
--- first, or this script creates it defensively below too).
+-- scripts. Run this BEFORE the rest of ../roles/setup_ci_prod_roles.sql
+-- if you haven't finished it yet (RAW.FOOTBALL needs to exist first -
+-- either run that script's section 3 up to
+-- `CREATE SCHEMA IF NOT EXISTS RAW.FOOTBALL` first, or this script
+-- creates it defensively below too).
 --
 -- Run PHASE 1 first, verify row counts match, THEN run PHASE 2. Do not
 -- run PHASE 2 until you've actually checked PHASE 1 worked - it drops the

@@ -24,26 +24,28 @@
 --   - PROD_ROLE (new) - the only role with write access to PRD_ANALYTICS,
 --                used exclusively by the new main-branch deploy workflow.
 --
--- Database state this script assumes (see setup_databases.sql, which
--- establishes/no-ops on all of these):
+-- Database state this script assumes (see ../bootstrap/setup_databases.sql,
+-- which establishes/no-ops on all of these):
 --   - RAW           -> exists (renamed from DEV_RAW manually, outside this
 --                      script). Its FOOTBALL schema is created fresh here
 --                      (section 3) rather than renamed from PUBLIC - the
 --                      raw data was never actually in RAW's default
 --                      PUBLIC schema (it turned up loaded into
 --                      PRD_ANALYTICS by mistake; see
---                      migrate_raw_data_from_prd_analytics.sql for
---                      recovering it into RAW.FOOTBALL, and
---                      setup_raw_stage.sql for future reloads). PUBLIC is
---                      left alone, harmless and unused - drop it later
---                      once you've confirmed nothing's in it.
---   - CI_ANALYTICS  -> exists (established directly by setup_databases.sql
---                      rather than renamed from STG_ANALYTICS here - if
+--                      ../migrations/migrate_raw_data_from_prd_analytics.sql
+--                      for recovering it into RAW.FOOTBALL, and
+--                      ../ingestion/setup_raw_stage.sql for future
+--                      reloads). PUBLIC is left alone, harmless and
+--                      unused - drop it later once you've confirmed
+--                      nothing's in it.
+--   - CI_ANALYTICS  -> exists (established directly by
+--                      ../bootstrap/setup_databases.sql rather than
+--                      renamed from STG_ANALYTICS here - if
 --                      STG_ANALYTICS/STG_RAW still exist as leftovers,
 --                      drop them manually once you've confirmed
 --                      CI_ANALYTICS has everything it needs).
 --
--- Prerequisite: run setup_databases.sql first.
+-- Prerequisite: run ../bootstrap/setup_databases.sql first.
 --
 -- Run top to bottom in a single worksheet session, in order - grants in
 -- section 4 assume the roles/schema from sections 2-3 already exist.

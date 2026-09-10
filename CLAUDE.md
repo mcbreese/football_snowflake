@@ -73,7 +73,7 @@ Two separate local credential files, deliberately not shared:
   or use this file.
 - `secrets/.env.readonly` — a completely separate Snowflake user
   (`CLAUDE_SERVICE`) that only ever holds `CLAUDE_READONLY_ROLE` (see
-  `snowflake/setup_claude_readonly_role.sql`). Despite the
+  `snowflake/roles/setup_claude_readonly_role.sql`). Despite the
   `CLAUDE_`-prefixed env var names, this isn't Claude-exclusive — it's
   the shared account for anyone's local SQLFluff/ad hoc dbt
   compile/parse tooling too, since it's exactly the right (read-only,
@@ -131,7 +131,7 @@ followed convention.
 ## CI
 
 Four workflows, each with a distinct role/target — see
-`snowflake/setup_ci_prod_roles.sql` for the underlying Snowflake role/db
+`snowflake/roles/setup_ci_prod_roles.sql` for the underlying Snowflake role/db
 setup:
 
 - `.github/workflows/dbt_test.yml` — PR checks against `--target ci`.

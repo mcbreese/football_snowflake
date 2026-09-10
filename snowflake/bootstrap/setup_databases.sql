@@ -10,14 +10,14 @@
 --
 -- CREATE DATABASE IF NOT EXISTS makes this safe to run regardless of which
 -- of these already exist in the account. Note: DEV_RAW has already been
--- manually renamed to RAW (see setup_ci_prod_roles.sql), so this script
--- targets RAW directly rather than DEV_RAW - only relevant if you're
--- setting up a fresh account from scratch, where you'd create DEV_RAW
--- instead and let setup_ci_prod_roles.sql do the rename.
+-- manually renamed to RAW (see ../roles/setup_ci_prod_roles.sql), so this
+-- script targets RAW directly rather than DEV_RAW - only relevant if
+-- you're setting up a fresh account from scratch, where you'd create
+-- DEV_RAW instead and let ../roles/setup_ci_prod_roles.sql do the rename.
 --
 -- NOT run by dbt or CI - run manually, same as the other snowflake/*.sql
--- scripts. Run this BEFORE setup_ci_prod_roles.sql - that script renames
--- and drops these databases, and needs them to exist first.
+-- scripts. Run this BEFORE ../roles/setup_ci_prod_roles.sql - that script
+-- renames and drops these databases, and needs them to exist first.
 
 USE ROLE SYSADMIN;
 

@@ -111,14 +111,22 @@ Create `secrets/.env.extraction` (repo root, next to the existing
 never committed):
 
 ```
-export KAGGLE_USERNAME=<from kaggle.json>
-export KAGGLE_KEY=<from kaggle.json>
-export AWS_ACCESS_KEY_ID=<from the IAM user above>
-export AWS_SECRET_ACCESS_KEY=<from the IAM user above>
-export AWS_DEFAULT_REGION=<the bucket's AWS region, e.g. eu-west-2>
-export S3_BUCKET=<your-bucket>
-export S3_PREFIX=<your-prefix>
+KAGGLE_USERNAME=<from kaggle.json>
+KAGGLE_KEY=<from kaggle.json>
+AWS_ACCESS_KEY_ID=<from the IAM user above>
+AWS_SECRET_ACCESS_KEY=<from the IAM user above>
+AWS_DEFAULT_REGION=<the bucket's AWS region, e.g. eu-west-2>
+S3_BUCKET=<your-bucket>
+S3_PREFIX=<your-prefix>
 ```
+
+No `export` prefix, unlike `secrets/.env.readonly` elsewhere in this
+project — `uv run --env-file` accepts plain `KEY=VALUE` just as well, but
+VS Code's own debugger `envFile` loading (see "Debugging" below) does
+*not* strip a leading `export`, so a line like `export S3_BUCKET=...`
+would set a variable literally named `export S3_BUCKET`, not `S3_BUCKET`,
+and the script would fail with "S3_BUCKET is not set" even though the
+file is otherwise correct. Plain `KEY=VALUE` works in both places.
 
 `kagglehub` and `boto3` both read their credentials straight from these
 environment variables — nothing in the script itself references them by
@@ -139,6 +147,18 @@ uv run --env-file secrets/.env.extraction python extraction/extract_kaggle_to_s3
 
 Always `--dry-run` first on a bucket you haven't run this against before —
 it prints exactly what would be uploaded and deleted with no side effects.
+
+### Debugging in VS Code
+
+`.vscode/launch.json` (local-only, gitignored like `.vscode/settings.json`
+— not part of this repo) has an **"Extract Kaggle -> S3 (dry run)"**
+config: it loads `secrets/.env.extraction` via `envFile` so credentials
+are actually present in the debug session, and hardcodes `--dry-run` so
+stepping through the code can't trigger a real S3 write by accident. Set a
+breakpoint, then launch that config from the Run and Debug panel — don't
+use the plain "Run Python File" button, since that won't load the env
+file at all and the script will immediately fail on the missing
+`S3_BUCKET` check.
 
 After a successful run, the next manual step is loading S3 into Snowflake
 (see `snowflake/ingestion/load_raw_football_procedure.sql`):

@@ -5,13 +5,14 @@ This is my personal side project focused on building a solid data transformation
 
 The main reason this project exists was to force myself to learn dbt Core. Every architectural choice, data contract, and test was done with the intent of practising proper dbt principles: modularity, testing, and documentation.
 
-This section documents my journey building this analytics platform, highlighting technical decisions, encountered challenges, and successful implementations across the PySpark ETL and dbt transformation layers.
+This section documents my journey building this analytics platform, highlighting technical decisions, encountered challenges, and successful implementations across the extraction, ingestion, and dbt transformation layers.
 
 ## Tech Stack
 
 - **Transformation:** dbt Core, on Snowflake
+- **Extraction:** `kagglehub` + `boto3` (Kaggle → S3, `extraction/`), manual invocation
 - **Orchestration/CI-CD:** GitHub Actions (PR checks, prod deploy, scratch-schema teardown)
-- **Quality:** dbt data contracts (schema enforced per model, not just gold), dbt tests, sqlfluff + black
+- **Quality:** dbt data contracts (schema enforced per model, not just gold), dbt tests, sqlfluff + black, pytest (`extraction/tests/`)
 - **Tooling:** Python 3.12, managed with `uv`
 - **Infra-as-code:** Snowflake roles/databases provisioned via checked-in SQL (`snowflake/`), not click-ops
 
@@ -34,13 +35,15 @@ football_snowflake/
 ├── .github/workflows/
 │   ├── dbt_test.yml                 # PR checks - Slim CI (state:modified+ --defer) against a throwaway schema
 │   ├── dbt_deploy.yml               # push:main - the real prod deploy, publishes the manifest PRs diff against
+│   ├── dbt_scheduled.yml            # weekly full `dbt build --target prod` - refreshes what dbt_deploy.yml's selective build wouldn't
 │   └── dbt_ci_teardown.yml          # drops a PR's scratch schema once it's merged or closed
 ├── snowflake/                      # checked-in SQL for account/role/database setup
 │   ├── bootstrap/                    # baseline database creation, run first
 │   ├── roles/                        # role/grant setup (dev/ci/prod/readonly/ingestion/reporting)
-│   ├── ingestion/                    # RAW.FOOTBALL load path - S3 stage + load procedure
+│   ├── ingestion/                    # RAW.FOOTBALL load path - S3 stage + load procedure (S3 -> Snowflake)
 │   ├── migrations/                   # one-off data recovery/migration scripts
 │   └── mcp/                          # Claude MCP server setup
+├── extraction/                     # Kaggle -> S3 extraction script + tests, run manually (see extraction/README.md)
 ├── profiling/                      # one-off data profiling scripts + generated ydata-profiling reports
 ├── main.py                         # entry point for the profiling scripts
 ├── pyproject.toml / uv.lock        # Python dependencies
@@ -51,13 +54,14 @@ Not committed, by design: `secrets/` and `rsa_key.p8` (real credentials/keys), `
 
 ## How It Works
 
-**Data flow:** raw Transfermarkt Kaggle CSVs → manually loaded into Snowflake (`RAW.FOOTBALL`) → dbt staging → intermediate → marts (gold). Every model — staging included, not just gold — has its schema enforced by a one-per-model data contract file (`models/<layer>/<model>.yml`).
+**Data flow:** raw Transfermarkt Kaggle CSVs → scripted extraction into S3 (`extraction/extract_kaggle_to_s3.py`) → loaded into Snowflake (`RAW.FOOTBALL`) → dbt staging → intermediate → marts (gold). Every model — staging included, not just gold — has its schema enforced by a one-per-model data contract file (`models/<layer>/<model>.yml`).
 
 **Environments:** four dbt targets in `profiles.yml`, each backed by its own Snowflake role: `dev` (interactive local development), `ci` (PR builds, a throwaway schema per PR), `prod` (the real deploy), and `claude_readonly` (a genuinely read-only role, enforced by Snowflake itself, for local linting/compiling — not just a convention).
 
 **CI/CD**, all under `.github/workflows/`:
 - Every PR runs `dbt_test.yml`, which builds only the models that changed plus their downstream dependents (dbt's `state:modified+`) against the last successful prod deploy's manifest, rather than rebuilding the whole project on every PR.
 - Merging to `main` triggers `dbt_deploy.yml` — the actual write to production — which also publishes the manifest the next PR's Slim CI comparison needs.
+- `dbt_scheduled.yml` runs a full `dbt build --target prod` weekly, independent of merges — catches drift in models (like the incremental `int_player_appearances`) that `dbt_deploy.yml`'s selective build wouldn't reselect just because time passed and source data moved.
 - `dbt_ci_teardown.yml` drops a PR's scratch schema once it's merged or closed, so nothing lingers in Snowflake.
 
 **Governance:** GitHub branch protection and Dependabot on `main`, CODEOWNERS, a dedicated read-only Snowflake role for reporting/BI use, and Snowflake role/database setup checked in as SQL (`snowflake/`) rather than configured by hand in the UI.
@@ -95,3 +99,5 @@ The timeline below is a running first-person log of how the project actually got
 | **18/08/2026** | **State-Based CI** | Split the single `DATA_ENGINEER` role/`dev` target into genuine `dev`/`ci`/`prod` environments — `DEV_ROLE`/`CI_ROLE`/`PROD_ROLE` (see `snowflake/setup_ci_prod_roles.sql`), a shared `RAW.FOOTBALL` raw database, and a repurposed `CI_ANALYTICS` database for throwaway per-PR schemas. Added a `push:main` prod-deploy workflow (`dbt_deploy.yml`) that publishes a `manifest.json` artifact, a PR-teardown workflow (`dbt_ci_teardown.yml`), and switched `dbt_test.yml` to dbt's Slim CI pattern (`state:modified+ --defer`) so PRs build only changed models plus dependents against real prod state instead of the full DAG. |
 | **18/08/2026** | **State-Based CI — Recovery & Verification** | Mid-rollout, discovered the raw CSV data had been manually loaded into `PRD_ANALYTICS.FOOTBALL` instead of `DEV_RAW` at some earlier point — recovered via zero-copy `CLONE` into `RAW.FOOTBALL` (`snowflake/migrate_raw_data_from_prd_analytics.sql`), verified with matching row counts, no data lost. Fixed a first-PR chicken-and-egg bug where looking up `dbt_deploy.yml`'s run history 404s before that workflow exists on `main` (now falls back to a full build). Expanded the `generate_schema_name`/`drop_ci_schema` macros with line-by-line Jinja explanations. Verified the full mechanism end-to-end with two throwaway PRs: a macro-only change correctly selected zero models (nothing depends on those macros), and a `stg_appearances` comment correctly cascaded to its true downstream dependents (`int_player_appearances`, `fct_player_performance_per_season_competition`) while `--defer` resolved untouched refs (`dim_clubs`, `dim_players`) to their real `PRD_ANALYTICS` locations — confirmed directly against the downloaded `manifest.json`. |
 | **10/09/2026** | **Ingestion Traceability — S3 Stage + Stored Procedure** | Replaced the ad-hoc worksheet that loaded raw CSVs into `RAW.FOOTBALL` with a version-controlled stored procedure (`snowflake/ingestion/load_raw_football_procedure.sql`), repointed at a new S3 external stage (`football_s3_int`/`football_s3_stage`, `snowflake/ingestion/create_s3_stage.sql`) instead of the old internal upload stage — `INFER_SCHEMA`, `MATCH_BY_COLUMN_NAME`, and the `source_file`/`loaded_timestamp` lineage columns all preserved as-is, test scaffolding (a `RAW_TEST_` table prefix, a loop-ending `RETURN`) removed. Runs under a new dedicated `RAW_INGESTION_ROLE` (`snowflake/roles/setup_ingestion_role.sql`) instead of `SYSADMIN`. Cut over safely via a zero-copy clone rollback point and a row-count/column-set comparison (`snowflake/ingestion/cutover_validation.sql`); verified with `dbt source freshness` and a manual column cross-check against all 7 staging models — no drift, nothing broke downstream. AWS account ID/IAM role ARN/S3 bucket path kept out of git via placeholder tokens in the committed file rather than a real+`.example` pair. Also reorganized `snowflake/` into purpose-named subfolders (`bootstrap/`, `roles/`, `ingestion/`, `migrations/`, `mcp/`). The old internal stage (`RAW_LANDING_STAGE`) is marked deprecated but not yet dropped, pending a confirmed real run. |
+| **14/09/2026** | **Kaggle → S3 Extraction Automated** | Automated the one remaining manual hop: raw CSVs used to be downloaded from Kaggle and uploaded to S3 by hand. New `extraction/extract_kaggle_to_s3.py` pulls the full `davidcariboo/player-scores` dataset via `kagglehub` and pushes it to the same S3 location `football_s3_stage` reads from, using `boto3` — upload-first-then-prune-stale-objects, so a failed run can never leave the stage partially emptied. Credentials (Kaggle API token, a new least-privilege AWS IAM user scoped to just this bucket/prefix — distinct from the `STORAGE_AWS_ROLE_ARN` role Snowflake itself assumes) live in a new gitignored `secrets/.env.extraction`, same pattern as the existing `secrets/.env.readonly`. Added the project's first pytest suite (`extraction/tests/`), focused on the two pieces of actual logic (S3 key joining, stale-key diffing) plus a `moto`-backed in-memory-S3 test of the full upload/prune sequence — deliberately not testing the thin `kagglehub`/`boto3` wrappers themselves, since that would mostly just test the mock. Wired into `dbt_test.yml`'s existing `lint` job (no new workflow, no credentials needed). Still fully manual by design — no scheduler, and the Snowflake load procedure downstream isn't auto-triggered either; that's an explicit later discussion. |
+| **14/09/2026** | **Kaggle → S3 Extraction — First Real Run & Fixes** | The first `--dry-run` against the real bucket surfaced two issues before any data moved. (1) The stale-object prune step was comparing *every* object under the S3 prefix, not just `.csv` files, so it flagged a pre-existing zero-byte "folder placeholder" object (the kind the S3 console creates via *New Folder*) as stale — fixed by scoping `list_existing_keys` to `.csv` keys only, matching what `load_raw_football_procedure.sql`'s own cursor already filters for, with a regression test added. (2) VS Code's debugger `envFile` loading doesn't strip a leading `export` the way `uv run --env-file` does, so `secrets/.env.extraction` had to drop the `export` prefix used elsewhere (`.env.readonly` keeps it, since it's never loaded through VS Code) — documented in `extraction/README.md` alongside a new `.vscode/launch.json` debug config (local-only, gitignored, defaults to `--dry-run`). With both fixed, the first full real run completed successfully — every file in the dataset uploaded with no incident, including two new ones (`countries.csv`, `national_teams.csv`) that weren't in the original `profiling/data/` snapshot, confirming the "no hardcoded file list" design actually holds up against a moving source dataset. |

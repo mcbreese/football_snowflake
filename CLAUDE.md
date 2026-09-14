@@ -37,11 +37,17 @@ below for which `--target` is actually safe to run autonomously.
 
 ## Architecture
 
-Pipeline: raw CSV → manually loaded into Snowflake → dbt staging →
-intermediate → gold, all within `dbt_football_snowflake/models/`. Per-layer
-schema, materialization, and tags are configured in
-`dbt_football_snowflake/dbt_project.yml`, read that file rather than
-assuming layer config.
+Pipeline: raw Kaggle CSV → `extraction/extract_kaggle_to_s3.py` (manual,
+Kaggle → S3, overwrites the S3 stage each run) → S3 → Snowflake RAW via
+`snowflake/ingestion/load_raw_football_procedure.sql` (manual) → dbt staging
+→ intermediate → gold, all within `dbt_football_snowflake/models/`.
+`extraction/` and `snowflake/ingestion/` are deliberately separate folders —
+Extract (source → landing zone) vs Load (landing zone → warehouse) are
+different concerns with different tooling (Python vs Snowflake Scripting).
+Neither step is scheduled or chained together yet; both are run by hand.
+Per-layer schema, materialization, and tags for the dbt models themselves
+are configured in `dbt_football_snowflake/dbt_project.yml`, read that file
+rather than assuming layer config.
 
 Model naming maps to layer: `stg_` (staging), `int_` (intermediate),
 `dim_`/`fct_` (gold). This isn't linted, so respect it by convention when
@@ -66,7 +72,7 @@ needs it (`dbt_test.yml`, `dbt_deploy.yml`, `dbt_ci_teardown.yml`)
 materialises it at runtime from `secrets.RSA_KEY_CONTENTS`. Don't create or
 commit a real key file locally.
 
-Two separate local credential files, deliberately not shared:
+Three separate local credential files, deliberately not shared:
 - `.vscode/settings.json` — the user's own personal login (`MCBREESE`),
   holds `DEV_ROLE`/`CI_ROLE`/`PROD_ROLE`. This is for the user's own
   interactive use (VS Code's integrated terminal). Claude should not read
@@ -103,6 +109,21 @@ Two separate local credential files, deliberately not shared:
   the one invocation, there's no risk of `DBT_ENGINE_TARGET` becoming a
   silent ambient default for some unrelated bare `dbt` command later in
   the same shell.
+- `secrets/.env.extraction` — Kaggle API credentials
+  (`KAGGLE_USERNAME`/`KAGGLE_KEY`) plus AWS access keys for a dedicated,
+  least-privilege IAM user (`S3_BUCKET`/`S3_PREFIX`/`AWS_ACCESS_KEY_ID`/
+  `AWS_SECRET_ACCESS_KEY`/`AWS_DEFAULT_REGION`) used by
+  `extraction/extract_kaggle_to_s3.py`. That IAM user is a genuinely
+  different identity from `STORAGE_AWS_ROLE_ARN` in
+  `snowflake/ingestion/create_s3_stage.sql` — that's a role Snowflake's
+  storage integration assumes to *read* the bucket; this is a local
+  script writing to it, so it needs its own credentials with `PutObject`/
+  `DeleteObject`/`ListBucket` on just that bucket/prefix. Same
+  `--env-file`, never-persists-in-shell pattern as `.env.readonly`:
+  ```
+  uv run --env-file secrets/.env.extraction python extraction/extract_kaggle_to_s3.py --dry-run
+  ```
+  See `extraction/README.md` for the one-time IAM/Kaggle-token setup.
 
 ## Environment / target safety
 

@@ -204,7 +204,12 @@ jobs:
       # No credentials or dbt compilation needed for this one - runs first
       # so a pure style issue fails as fast as possible.
       - name: Black --check
-        run: uv run black --check --diff main.py profiling/
+        run: uv run black --check --diff main.py profiling/ extraction/
+
+      # extraction/'s tests mock both Kaggle and S3 (moto), so this needs
+      # no credentials either - safe to run alongside the style checks.
+      - name: Extraction unit tests
+        run: uv run pytest extraction/tests
 
       - name: Write RSA Key to File
         working-directory: ./dbt_football_snowflake

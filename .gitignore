@@ -12,6 +12,11 @@ profiling/data
 rsa_key.p8
 rsa_key.pub
 
+# Python bytecode cache + pytest's own cache dir - first appeared with
+# extraction/'s test suite, nothing generated one before that.
+__pycache__/
+.pytest_cache/
+
 # Claude Code's own read-only Snowflake service credentials - separate
 # identity from the personal login above, see snowflake/roles/setup_claude_readonly_role.sql.
 # Also the shared local credential for anyone's SQLFluff/ad hoc dbt use -

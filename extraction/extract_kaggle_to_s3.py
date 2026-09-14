@@ -36,7 +36,15 @@ def list_existing_keys(s3_client, bucket: str, prefix: str) -> set[str]:
     keys: set[str] = set()
     for page in paginator.paginate(Bucket=bucket, Prefix=list_prefix):
         for obj in page.get("Contents", []):
-            keys.add(obj["Key"])
+            # Scoped to .csv only, matching what upload_files ever produces
+            # and what load_raw_football_procedure.sql's own cursor looks
+            # for (`WHERE RELATIVE_PATH LIKE '%.csv'`). Without this, a
+            # zero-byte "folder placeholder" object (e.g. one the S3
+            # console creates when you click New Folder) would get flagged
+            # stale and deleted on every run - harmless in practice, but
+            # not this script's object to manage.
+            if obj["Key"].endswith(".csv"):
+                keys.add(obj["Key"])
     return keys
 
 

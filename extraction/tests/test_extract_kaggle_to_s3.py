@@ -89,3 +89,35 @@ def test_dry_run_does_not_modify_s3(tmp_path):
     delete_keys(s3, bucket, stale, dry_run=True)
 
     assert list_existing_keys(s3, bucket, prefix) == {f"{prefix}/old_dataset_file.csv"}
+
+
+@mock_aws
+def test_non_csv_objects_are_never_listed_or_pruned(tmp_path):
+    # Regression test for a real dry-run finding: S3 "folder placeholder"
+    # objects (a zero-byte object with a trailing-slash key, e.g. one the
+    # console creates via New Folder) aren't CSVs, aren't produced by
+    # upload_files, and shouldn't be treated as stale just because they
+    # sit under the same prefix.
+    bucket = "test-football-bucket"
+    prefix = "raw/football"
+    s3 = boto3.client("s3", region_name="us-east-1")
+    s3.create_bucket(Bucket=bucket)
+    s3.put_object(Bucket=bucket, Key=f"{prefix}/", Body=b"")
+    s3.put_object(Bucket=bucket, Key=f"{prefix}/notes.txt", Body=b"not a csv")
+
+    local_dir = tmp_path / "download"
+    local_dir.mkdir()
+    (local_dir / "clubs.csv").write_text("club_id,name\n1,Test FC\n", newline="")
+
+    existing = list_existing_keys(s3, bucket, prefix)
+    assert existing == set()
+
+    uploaded = upload_files(s3, bucket, prefix, local_dir, dry_run=False)
+    stale = stale_keys(existing, set(uploaded))
+    delete_keys(s3, bucket, stale, dry_run=False)
+
+    remaining = {
+        obj["Key"]
+        for obj in s3.list_objects_v2(Bucket=bucket, Prefix=f"{prefix}/")["Contents"]
+    }
+    assert remaining == {f"{prefix}/", f"{prefix}/notes.txt", f"{prefix}/clubs.csv"}

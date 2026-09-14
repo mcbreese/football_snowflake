@@ -29,9 +29,16 @@ this.
    so it won't quietly go stale if Kaggle adds or renames a file.
 2. Uploads every CSV to `s3://<bucket>/<prefix>/<filename>`, overwriting
    whatever key was already there.
-3. Deletes any object already in that S3 prefix that the new download didn't
-   just re-upload — i.e. a file removed from the Kaggle dataset since your
-   last run won't linger in S3 forever.
+3. Deletes any *`.csv`* object already in that S3 prefix that the new
+   download didn't just re-upload — i.e. a file removed from the Kaggle
+   dataset since your last run won't linger in S3 forever. Only `.csv` keys
+   are ever considered, matching exactly what `load_raw_football_procedure.sql`
+   itself looks for (`WHERE RELATIVE_PATH LIKE '%.csv'`) — anything else
+   sitting under the prefix (e.g. a zero-byte "folder placeholder" object,
+   the kind the S3 console creates when you click *New Folder*) is left
+   alone. A first dry run against a bucket that predates this script will
+   likely show one of these if you ever created the prefix by hand in the
+   console — harmless either way, but the script won't touch it.
 4. Prints a summary: files uploaded, bytes, stale objects removed.
 
 Steps 2 and 3 happen in that order — **upload first, prune second** — on

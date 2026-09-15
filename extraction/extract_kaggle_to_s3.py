@@ -25,24 +25,22 @@ def s3_key_for(prefix: str, filename: str) -> str:
 
 
 def stale_keys(existing: set[str], uploaded: set[str]) -> set[str]:
-    return existing - uploaded
+    return existing - uploaded  # everything in existing, minus everything in uploaded
 
 
 def list_existing_keys(s3_client, bucket: str, prefix: str) -> set[str]:
-    # Trailing slash matters here: without it, Prefix="raw" would also
-    # match unrelated keys like "raw_archive/file.csv".
+    # trailing slash so Prefix="raw" doesn't also match "raw_archive/..."
     list_prefix = f"{prefix.strip('/')}/" if prefix.strip("/") else ""
-    paginator = s3_client.get_paginator("list_objects_v2")
+    paginator = s3_client.get_paginator(
+        "list_objects_v2"
+    )  # handles S3's 1000-per-page cap
     keys: set[str] = set()
     for page in paginator.paginate(Bucket=bucket, Prefix=list_prefix):
-        for obj in page.get("Contents", []):
-            # Scoped to .csv only, matching what upload_files ever produces
-            # and what load_raw_football_procedure.sql's own cursor looks
-            # for (`WHERE RELATIVE_PATH LIKE '%.csv'`). Without this, a
-            # zero-byte "folder placeholder" object (e.g. one the S3
-            # console creates when you click New Folder) would get flagged
-            # stale and deleted on every run - harmless in practice, but
-            # not this script's object to manage.
+        for obj in page.get(
+            "Contents", []
+        ):  # "Contents" key is absent (not []) when empty
+            # .csv only - matches load_raw_football_procedure.sql's own filter, so
+            # folder-placeholder objects etc. under this prefix are never touched
             if obj["Key"].endswith(".csv"):
                 keys.add(obj["Key"])
     return keys
@@ -54,8 +52,14 @@ def upload_files(
     """Uploads every CSV under local_dir, returns {s3_key: size_bytes}."""
     uploaded: dict[str, int] = {}
     for csv_path in sorted(local_dir.rglob("*.csv")):
-        key = s3_key_for(prefix, csv_path.name)
         size = csv_path.stat().st_size
+        if size == 0:
+            # Fail loud before uploading anything - propagates up and skips
+            # delete_keys entirely, same safety net as any other error here.
+            raise ValueError(
+                f"{csv_path.name} downloaded as 0 bytes - refusing to upload it"
+            )
+        key = s3_key_for(prefix, csv_path.name)
         if dry_run:
             print(
                 f"[dry-run] would upload {csv_path.name} -> s3://{bucket}/{key} ({size:,} bytes)"
@@ -74,11 +78,8 @@ def delete_keys(s3_client, bucket: str, keys: set[str], dry_run: bool) -> None:
         for key in sorted(keys):
             print(f"[dry-run] would delete stale s3://{bucket}/{key}")
         return
-    # DeleteObjects caps at 1000 keys per call - this dataset only has
-    # ~10 files, but chunking costs nothing and avoids a silent limit
-    # if that ever changes.
     key_list = sorted(keys)
-    for i in range(0, len(key_list), 1000):
+    for i in range(0, len(key_list), 1000):  # DeleteObjects caps at 1000 keys/call
         chunk = key_list[i : i + 1000]
         s3_client.delete_objects(
             Bucket=bucket,
@@ -115,12 +116,21 @@ def main() -> int:
     existing = list_existing_keys(s3_client, bucket, prefix)
     print(f"{len(existing)} object(s) currently in s3://{bucket}/{prefix}")
 
-    # Upload first, prune second: if an upload raises partway through, the
-    # exception propagates before delete_keys ever runs, so a failed run
-    # never leaves the stage with fewer files than it started with.
+    # upload first, prune second: an exception here skips delete_keys entirely, so
+    # a failed run never leaves the stage with fewer files than it started with
     uploaded = upload_files(s3_client, bucket, prefix, download_dir, args.dry_run)
 
-    stale = stale_keys(existing, set(uploaded))
+    if not uploaded:
+        # zero files is never valid for this dataset - without this check,
+        # stale_keys below would treat every existing object as stale and wipe them all
+        print(
+            f"No CSV files found in the Kaggle download ({download_dir}) - "
+            "aborting without touching S3.",
+            file=sys.stderr,
+        )
+        return 1
+
+    stale = stale_keys(existing, set(uploaded))  # set(dict) walks its keys
     delete_keys(s3_client, bucket, stale, args.dry_run)
 
     total_bytes = sum(uploaded.values())
@@ -133,4 +143,4 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(main())  # turns main()'s return value into the process exit code

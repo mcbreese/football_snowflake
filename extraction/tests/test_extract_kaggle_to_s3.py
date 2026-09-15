@@ -1,4 +1,5 @@
 import boto3
+import pytest
 from moto import mock_aws
 
 from extraction.extract_kaggle_to_s3 import (
@@ -31,6 +32,18 @@ def test_stale_keys_is_existing_minus_uploaded():
 def test_stale_keys_empty_when_sets_match():
     keys = {"raw/clubs.csv", "raw/players.csv"}
     assert stale_keys(keys, keys) == set()
+
+
+def test_upload_files_rejects_zero_byte_csv(tmp_path):
+    # Regression test: a truncated/empty download must never be uploaded as
+    # if it were good data - and must raise before touching s3_client at all
+    # (passing None here would error immediately if that guarantee broke).
+    local_dir = tmp_path / "download"
+    local_dir.mkdir()
+    (local_dir / "empty.csv").write_text("")
+
+    with pytest.raises(ValueError, match="0 bytes"):
+        upload_files(None, "unused-bucket", "raw/football", local_dir, dry_run=True)
 
 
 @mock_aws

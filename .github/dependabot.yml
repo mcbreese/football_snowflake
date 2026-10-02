@@ -1,0 +1,53 @@
+version: 2
+
+updates:
+  # Python dependencies (pyproject.toml + uv.lock at the repo root).
+  #
+  # Weekly, grouped, so a week's worth of bumps arrives as at most two PRs
+  # instead of one PR per package. Security updates are NOT grouped (groups
+  # default to applies-to: version-updates), so a vulnerability fix still
+  # arrives as its own, immediately visible PR.
+  #
+  # Groups are matched top to bottom and a package lands in the first group
+  # it matches. The first group holds everything on the dbt / Snowflake
+  # connection path, which dbt_test.yml cannot test on Dependabot PRs (no
+  # Snowflake credentials, so run-dbt is skipped). Keeping those apart means
+  # a risky bump is never hidden inside a pile of low-risk ones, and it
+  # signals "run `dbt debug --target claude_readonly` locally before merging".
+  - package-ecosystem: "uv"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "07:00" # after dbt_scheduled.yml's Monday 04:00 UTC full build
+      timezone: "Europe/London"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      dbt-snowflake-stack:
+        patterns:
+          - "dbt-*"
+          - "snowflake-*"
+          - "cryptography"
+          - "pyjwt"
+          - "urllib3"
+          - "pyopenssl"
+      python-tooling:
+        patterns:
+          - "*"
+
+  # GitHub Actions used by .github/workflows/*. One weekly PR for all of them.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "07:00"
+      timezone: "Europe/London"
+    commit-message:
+      prefix: "chore(ci)"
+    groups:
+      github-actions:
+        patterns:
+          - "*"

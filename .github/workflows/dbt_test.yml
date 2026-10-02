@@ -18,6 +18,17 @@ permissions:
 
 jobs:
   run-dbt:
+    # Skipped for Dependabot: GitHub withholds normal Actions secrets from
+    # Dependabot-triggered runs (only the separate "Dependabot secrets" store
+    # is exposed), so every Snowflake credential below would be empty and the
+    # job would fail at `dbt debug` with a PEM error, whatever the bump
+    # contained. Deliberately not mirrored into the Dependabot secrets store,
+    # to avoid a second copy of the CI key-pair. github.actor (not the PR
+    # author) is the right check: a re-run keeps the original actor, while a
+    # human pushing to a dependabot/ branch gets normal secrets back.
+    # Note a skipped job reports as passing for branch protection.
+    if: github.actor != 'dependabot[bot]'
+
     # Run the workflow on a fresh GitHub-hosted Ubuntu runner
     runs-on: ubuntu-latest
 
@@ -211,7 +222,12 @@ jobs:
       - name: Extraction unit tests
         run: uv run pytest extraction/tests
 
+      # Steps below need Snowflake credentials (sqlfluff's dbt templater
+      # connects to compile), which Dependabot runs don't receive - see the
+      # note on run-dbt. Black and pytest above still run for Dependabot, so
+      # a bump that breaks the Python tooling is still caught.
       - name: Write RSA Key to File
+        if: github.actor != 'dependabot[bot]'
         working-directory: ./dbt_football_snowflake
         run: |
           printf '%s\n' "$RSA_KEY_CONTENTS" > rsa_key.p8
@@ -220,9 +236,11 @@ jobs:
       # sqlfluff's dbt templater needs dbt_utils (generate_surrogate_key
       # etc.) installed to compile the project before it can lint anything.
       - name: Install dbt packages
+        if: github.actor != 'dependabot[bot]'
         working-directory: ./dbt_football_snowflake
         run: uv run dbt deps --profiles-dir .
 
       - name: SQLFluff lint
+        if: github.actor != 'dependabot[bot]'
         working-directory: ./dbt_football_snowflake
         run: uv run sqlfluff lint models/

@@ -1,0 +1,1 @@
+Throwaway file. Exists only so a PR authored by a human actor (not Dependabot) runs the full dbt_test.yml, exercising actions/github-script v9 and actions/download-artifact v8 with real secrets. Close the PR without merging.

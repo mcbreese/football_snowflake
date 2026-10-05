@@ -43,7 +43,7 @@ jobs:
 
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       # Installs the exact dbt-core/dbt-snowflake versions pinned in
       # uv.lock - matches local dev exactly (CLAUDE.md's "Always invoke
@@ -86,7 +86,7 @@ jobs:
 
       - name: Find previous successful deploy run
         id: find_run
-        uses: actions/github-script@v9
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
           script: |
             const runs = await github.rest.actions.listWorkflowRuns({
@@ -107,7 +107,7 @@ jobs:
       - name: Download previous manifest
         if: steps.find_run.outputs.run_id != ''
         continue-on-error: true # missing/expired artifact -> fall back to full build, don't hard-fail
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: prod-manifest
           path: ./dbt_football_snowflake/state
@@ -140,7 +140,7 @@ jobs:
       # never publishes a manifest representing broken/partial state for
       # PR runs (or the next deploy) to diff against.
       - name: Upload manifest artifact
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: prod-manifest
           path: dbt_football_snowflake/target/manifest.json
@@ -166,7 +166,7 @@ jobs:
 
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Install uv
         uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
@@ -191,7 +191,7 @@ jobs:
         run: uv run dbt docs generate --target prod --profiles-dir .
 
       - name: Upload dbt docs artifact
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: dbt-docs
           path: |

@@ -39,7 +39,7 @@ football_snowflake/
 │   └── dbt_ci_teardown.yml          # drops a PR's scratch schema once it's merged or closed
 ├── snowflake/                      # checked-in SQL for account/role/database setup
 │   ├── bootstrap/                    # baseline database creation, run first
-│   ├── roles/                        # role/grant setup (dev/ci/prod/readonly/ingestion/reporting)
+│   ├── roles/                        # role/grant setup (dev/ci/prod/readonly/ingestion/reporting/gold schema grants)
 │   ├── ingestion/                    # RAW.FOOTBALL load path - S3 stage + load procedure (S3 -> Snowflake)
 │   ├── migrations/                   # one-off data recovery/migration scripts
 │   └── mcp/                          # Claude MCP server setup

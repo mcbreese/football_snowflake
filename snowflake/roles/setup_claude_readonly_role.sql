@@ -26,11 +26,19 @@
 
 USE ROLE SECURITYADMIN;
 
+-- TYPE = SERVICE makes "this is a service account" something Snowflake
+-- enforces rather than a comment: password and interactive (SSO/browser)
+-- login are rejected outright, so key-pair auth is the only way in.
 CREATE USER IF NOT EXISTS CLAUDE_SERVICE
+  TYPE = SERVICE
   RSA_PUBLIC_KEY = 'MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAtPjCuhFkj9YIVIUpohd4feYZvTTDBaPyNJeiczXHW4nPMZKhFT1KPCL5YcQM2CeSN7MNuLEJSeWrtL0Cy1FKgAXvzYGWQ89t8uRf0NJpni3FqJEijQBAcUENcijX3McKkYW8yTq4ntg22955y6bjMt31OOEuZOJUF596wM+eu90pUzhbNKOFLFZIBcpiyPTijjbqFhHqhkEZxLSHT2A0MTshSOzj5IAyyHD2Vj6jpMZaJ+S0fgOjmFLSmnkdyCEAJ5Cfisg1ei3XkEvBjtcNOoXS18PzMESrTZXYmbmip0z/NUlmI8eWu9IaCxGaanPF1ay2TYY4VHAEJmJHxrm43QIDAQAB'
   DEFAULT_ROLE = CLAUDE_READONLY_ROLE
   DEFAULT_WAREHOUSE = DEV_TRANSFORM_WH
   COMMENT = 'Read-only service account for Claude Code local investigation. Never grant DEV_ROLE/CI_ROLE/PROD_ROLE to this user - the whole point is that it cannot write.';
+
+-- CREATE ... IF NOT EXISTS is a no-op for a user that already exists, so
+-- it won't add TYPE to the live user on a re-run. This does; idempotent.
+ALTER USER CLAUDE_SERVICE SET TYPE = SERVICE;
 
 CREATE ROLE IF NOT EXISTS CLAUDE_READONLY_ROLE;
 
@@ -64,5 +72,9 @@ GRANT SELECT ON ALL TABLES IN DATABASE PRD_ANALYTICS TO ROLE CLAUDE_READONLY_ROL
 GRANT SELECT ON FUTURE TABLES IN DATABASE PRD_ANALYTICS TO ROLE CLAUDE_READONLY_ROLE;
 GRANT SELECT ON ALL VIEWS IN DATABASE PRD_ANALYTICS TO ROLE CLAUDE_READONLY_ROLE;
 GRANT SELECT ON FUTURE VIEWS IN DATABASE PRD_ANALYTICS TO ROLE CLAUDE_READONLY_ROLE;
+
+-- The database-level FUTURE grants above do NOT apply inside either
+-- FOOTBALL_GOLD schema (schema-level future grants there take precedence)
+-- - see setup_gold_schema_grants.sql for this role's gold mirrors.
 
 GRANT ROLE CLAUDE_READONLY_ROLE TO USER CLAUDE_SERVICE;

@@ -34,6 +34,10 @@ GRANT SELECT ON ALL TABLES IN SCHEMA DEV_ANALYTICS.football_gold TO ROLE FOOTBAL
 -- ...and on anything added to it later (new dims/facts, the
 -- dim_transfer_date seed), so this doesn't need re-running per model.
 GRANT SELECT ON FUTURE TABLES IN SCHEMA DEV_ANALYTICS.football_gold TO ROLE FOOTBALL_REPORTING;
+-- WARNING: a schema-level FUTURE grant makes Snowflake ignore every
+-- database-level FUTURE TABLES grant on DEV_ANALYTICS for this schema
+-- (CLAUDE_READONLY_ROLE). Run setup_gold_schema_grants.sql after this
+-- script, or that role loses SELECT on dev gold at the next dev build.
 
 -- No separate BI tool/service account exists yet, so grant to your own
 -- user - a user can hold multiple roles and switch between them

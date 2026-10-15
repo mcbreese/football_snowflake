@@ -40,6 +40,14 @@ GRANT USAGE ON DATABASE PRD_ANALYTICS TO ROLE CLAUDE_MCP_ROLE;
 GRANT USAGE ON SCHEMA PRD_ANALYTICS.FOOTBALL_GOLD TO ROLE CLAUDE_MCP_ROLE;
 GRANT SELECT ON ALL TABLES IN SCHEMA PRD_ANALYTICS.FOOTBALL_GOLD TO ROLE CLAUDE_MCP_ROLE;
 GRANT SELECT ON FUTURE TABLES IN SCHEMA PRD_ANALYTICS.FOOTBALL_GOLD TO ROLE CLAUDE_MCP_ROLE;
+-- Views too: marts are tables today, but a gold model switched to a view
+-- would otherwise vanish from Claude.ai without any error.
+GRANT SELECT ON ALL VIEWS IN SCHEMA PRD_ANALYTICS.FOOTBALL_GOLD TO ROLE CLAUDE_MCP_ROLE;
+GRANT SELECT ON FUTURE VIEWS IN SCHEMA PRD_ANALYTICS.FOOTBALL_GOLD TO ROLE CLAUDE_MCP_ROLE;
+-- WARNING: these schema-level FUTURE grants make Snowflake ignore every
+-- database-level FUTURE grant on PRD_ANALYTICS for this schema (CI_ROLE,
+-- CLAUDE_READONLY_ROLE). Run ../roles/setup_gold_schema_grants.sql after
+-- this script, or those roles lose SELECT on gold at the next prod build.
 
 -- ========================================
 -- STEP 3: The MCP server object

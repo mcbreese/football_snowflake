@@ -7,17 +7,17 @@ Usage (from the repo root):
     uv run python evals/run_evals.py --dry-run                                          # no calls
 """
 
-import argparse
-import hashlib
+import argparse  # reads command-line flags like --only L1 --trials 1
+import hashlib  # fingerprints files, to log exactly which version was used
 import json
-import os
-import subprocess
+import os  # reads environment variables (the secrets)
+import subprocess  # starts other programs, here `claude`
 import sys
-import time
+import time  # a stopwatch for durations
 from datetime import datetime, timezone
-from pathlib import Path
+from pathlib import Path  # file paths: Path / "folder" / "file"
 
-import yaml
+import yaml  # reads questions.yaml into Python dicts
 
 # Make `evals.grading` importable when this file is run as a script.
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -40,6 +40,7 @@ REQUIRED_ENV = ["SNOWFLAKE_MCP_URL", "SNOWFLAKE_MCP_PAT", "ANTHROPIC_API_KEY"]
 
 
 def parse_args() -> argparse.Namespace:
+    # Each add_argument is one flag you can pass; default = value if you don't.
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--trials", type=int, default=3)
     parser.add_argument("--only", nargs="*", help="Question ids to run, e.g. L1 A3")
@@ -68,10 +69,12 @@ def parse_args() -> argparse.Namespace:
 
 
 def sha256_of(path: Path) -> str:
+    # A fingerprint of the file: changes if even one character changes.
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def command_output(cmd: list[str]) -> str | None:
+    # Run a small command (e.g. git) and return its output, or None if it fails.
     try:
         return subprocess.run(
             cmd, capture_output=True, text=True, check=True
@@ -114,24 +117,27 @@ def claude_command(question: str, args: argparse.Namespace) -> list[str]:
 def run_trial(question: dict, trial: int, args, run_dir: Path, base: dict) -> dict:
     """Run one question once, write its raw transcript, and return the
     graded row for results.jsonl."""
-    started = datetime.now(timezone.utc)
-    clock = time.monotonic()
+    started = datetime.now(timezone.utc)  # wall-clock start time, for the log
+    clock = time.monotonic()  # stopwatch start, for duration_ms
     error = None
     try:
+        # Start `claude` and wait for it to finish. capture_output keeps what it
+        # prints (the transcript) instead of showing it on screen.
         proc = subprocess.run(
             claude_command(question["question"], args),
             capture_output=True,
             text=True,
             timeout=args.timeout,
-            cwd=EVALS_DIR,
+            cwd=EVALS_DIR,  # run from evals/, not the repo root
         )
         stdout, stderr, exit_code = proc.stdout, proc.stderr, proc.returncode
-    except subprocess.TimeoutExpired as exc:
+    except subprocess.TimeoutExpired as exc:  # ran longer than --timeout
         stdout = (
             exc.stdout.decode() if isinstance(exc.stdout, bytes) else (exc.stdout or "")
         )
         stderr, exit_code, error = "", None, f"timeout after {args.timeout}s"
 
+    # Scrub both secrets from the output before anything is written to disk.
     secrets = [os.environ.get("SNOWFLAKE_MCP_PAT"), os.environ.get("ANTHROPIC_API_KEY")]
     stdout = redact(stdout, secrets)
     stderr = redact(stderr, secrets)
@@ -142,6 +148,7 @@ def run_trial(question: dict, trial: int, args, run_dir: Path, base: dict) -> di
     if stderr.strip():
         raw_path.with_suffix(".stderr.txt").write_text(stderr)
 
+    # The transcript is one JSON object per line: turn each into a dict.
     events = []
     for line in stdout.splitlines():
         try:
@@ -149,6 +156,9 @@ def run_trial(question: dict, trial: int, args, run_dir: Path, base: dict) -> di
         except json.JSONDecodeError:
             continue  # stray non-JSON output; it's still in the raw file
 
+    # next(...) = first event matching the condition, or {} if none.
+    # init: the first event (which MCP servers connected).
+    # result: the last event (final answer, cost, tokens).
     init = next((e for e in events if e.get("subtype") == "init"), {})
     result = next((e for e in reversed(events) if e.get("type") == "result"), {})
     if not result and error is None:
@@ -156,7 +166,8 @@ def run_trial(question: dict, trial: int, args, run_dir: Path, base: dict) -> di
     elif result.get("is_error") and error is None:
         error = result.get("subtype") or "result marked is_error"
 
-    final_text = result.get("result")
+    # Grading: all of these functions live in grading.py.
+    final_text = result.get("result")  # the agent's final reply text
     parsed = parse_answer(final_text)
     sql_calls = extract_sql_calls(events, SQL_TOOL)
     answer_pass = grade_answer(question, parsed)
@@ -166,6 +177,7 @@ def run_trial(question: dict, trial: int, args, run_dir: Path, base: dict) -> di
     passed = answer_pass and (grounded is None or grounded)
 
     usage = result.get("usage") or {}
+    # One row for results.jsonl. **base copies in the run-level columns.
     return {
         **base,
         "question_id": question["id"],
@@ -205,6 +217,7 @@ def summarise(rows: list[dict], trials: int) -> dict:
     """Per-question and overall scores. pass@k and pass^k as defined in
     Anthropic's evals guidance: at least one of k trials passed, and all k
     trials passed (the consistency measure)."""
+    # Group rows by question, like GROUP BY question_id.
     by_question: dict[str, list[dict]] = {}
     for row in rows:
         by_question.setdefault(row["question_id"], []).append(row)
@@ -221,6 +234,7 @@ def summarise(rows: list[dict], trials: int) -> dict:
             "pass_hat_k": all(passes) and len(qrows) == trials,
         }
 
+    # `or 1` avoids dividing by zero if nothing ran.
     n = len(rows) or 1
     q = len(per_question) or 1
     costs = [r["total_cost_usd"] or 0 for r in rows]
@@ -243,6 +257,7 @@ def summarise(rows: list[dict], trials: int) -> dict:
 
 def main() -> int:
     args = parse_args()
+    # 1. Load the answer key and pick the questions to run.
     key_path = EVALS_DIR / "questions.yaml"
     prompt_path = EVALS_DIR / "prompt.md"
     key = yaml.safe_load(key_path.read_text())
@@ -251,6 +266,7 @@ def main() -> int:
         print(f"No questions match --only {args.only}", file=sys.stderr)
         return 2
 
+    # 2. --dry-run: just print the commands and stop.
     if args.dry_run:
         for q in questions:
             print(
@@ -261,6 +277,7 @@ def main() -> int:
             )
         return 0
 
+    # 3. Stop early with a clear message if a secret is missing.
     missing = [name for name in REQUIRED_ENV if not os.environ.get(name)]
     if missing:
         print(
@@ -270,6 +287,7 @@ def main() -> int:
         )
         return 2
 
+    # 4. Create this run's folder: evals/runs/<UTC time>_<git sha>/raw/
     git_sha = command_output(["git", "rev-parse", "--short", "HEAD"]) or "nogit"
     started = datetime.now(timezone.utc)
     run_id = f"{started.strftime('%Y%m%dT%H%M%SZ')}_{git_sha}"
@@ -297,10 +315,13 @@ def main() -> int:
         "mcp_server_url_host": os.environ["SNOWFLAKE_MCP_URL"].split("/")[2],
     }
     manifest_path = run_dir / "manifest.json"
-    manifest_path.write_text(json.dumps(manifest, indent=2))
+    manifest_path.write_text(
+        json.dumps(manifest, indent=2)
+    )  # written now, completed at the end
 
+    # 5. The main loop: every question x every trial.
     rows: list[dict] = []
-    spent = 0.0
+    spent = 0.0  # running cost, checked against --max-total-usd
     stopped_early = None
     with (run_dir / "results.jsonl").open("a") as results_file:
         for question in questions:
@@ -324,6 +345,7 @@ def main() -> int:
             if stopped_early:
                 break
 
+    # 6. Add the summary scores to the manifest and print them.
     manifest.update(
         {
             "ended_at": datetime.now(timezone.utc).isoformat(),
@@ -344,5 +366,6 @@ def main() -> int:
     return 0
 
 
+# Only runs main() when you run this file directly, not when tests import it.
 if __name__ == "__main__":
     sys.exit(main())

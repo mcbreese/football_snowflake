@@ -11,6 +11,7 @@ Run every command from the repo root.
 | Pilot: one question, once | `uv run --env-file secrets/.env.eval python evals/run_evals.py --only L1 --trials 1` |
 | Run a few questions | `uv run --env-file secrets/.env.eval python evals/run_evals.py --only L1 A3 R1` |
 | Full baseline: every question, 3 times | `uv run --env-file secrets/.env.eval python evals/run_evals.py` |
+| Read a run's results, nicely indented | `uv run python -m json.tool --json-lines evals/runs/<run folder>/results.jsonl` |
 | Run the tests (no secrets needed) | `uv run pytest evals/tests` |
 
 How a command is built:

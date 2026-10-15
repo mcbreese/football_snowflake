@@ -270,6 +270,13 @@ When reviewing or writing code, check for:
   Snowflake and are read in Snowsight without the repo, so they must
   stand alone: purpose and owner, no repo file paths or project jargon.
 
+## Runnable scripts
+
+Every script a person runs by hand gets a "Commands" table at the top of
+its README (what you want to do -> exact command, run from the repo root),
+and every command-line flag gets a `help=` description, so `--help` is a
+complete reference.
+
 ## Important Rules
 
 - Never commit `.env`, `profiles.yml` credentials, or Snowflake keys.

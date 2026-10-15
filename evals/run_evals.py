@@ -42,9 +42,15 @@ REQUIRED_ENV = ["SNOWFLAKE_MCP_URL", "SNOWFLAKE_MCP_PAT", "ANTHROPIC_API_KEY"]
 def parse_args() -> argparse.Namespace:
     # Each add_argument is one flag you can pass; default = value if you don't.
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("--trials", type=int, default=3)
+    parser.add_argument(
+        "--trials", type=int, default=3, help="Times to run each question (default 3)"
+    )
     parser.add_argument("--only", nargs="*", help="Question ids to run, e.g. L1 A3")
-    parser.add_argument("--model", default=DEFAULT_MODEL)
+    parser.add_argument(
+        "--model",
+        default=DEFAULT_MODEL,
+        help=f"Model to test (default {DEFAULT_MODEL})",
+    )
     parser.add_argument(
         "--max-budget-usd",
         type=float,

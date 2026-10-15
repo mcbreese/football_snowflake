@@ -9,6 +9,9 @@ logs/
 /.vscode
 .vscode/settings.json
 profiling/data
+# ydata-profiling HTML output (~47 MB) - regenerate locally with
+# profiling/scripts/profile_transfermarkt_datasets.py.
+profiling/reports/
 rsa_key.p8
 rsa_key.pub
 

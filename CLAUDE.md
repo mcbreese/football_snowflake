@@ -260,6 +260,16 @@ When reviewing or writing code, check for:
   flagging it explicitly, even though this dataset doesn't currently
   contain any.
 
+## Comment verbosity
+
+- **SQL scripts:** a header of up to 4 lines (what it does, which role
+  runs it, run order). Inline comments only where the *why* isn't obvious
+  from the code, one line each. Longer reasoning goes in the commit
+  message, a README or Notion, not the script.
+- **Object `COMMENT`s** (users, roles, warehouses, policies) live in
+  Snowflake and are read in Snowsight without the repo, so they must
+  stand alone: purpose and owner, no repo file paths or project jargon.
+
 ## Important Rules
 
 - Never commit `.env`, `profiles.yml` credentials, or Snowflake keys.

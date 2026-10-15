@@ -47,4 +47,4 @@ the repo's review standard.
 Ukraine's league, so `fct_player_performance_per_season_competition`
 merges the two, and joining it to `dim_competitions` on name doubles
 the rows. No question here depends on it; fixing it changes the fact's
-grain and is tracked separately.
+grain and is tracked in mcbreese/football_snowflake#76.

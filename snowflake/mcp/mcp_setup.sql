@@ -95,8 +95,16 @@ CREATE USER IF NOT EXISTS CLAUDE_MCP_USER
     PASSWORD = '<choose a strong password>'
     DEFAULT_ROLE = 'CLAUDE_MCP_ROLE'
     DEFAULT_WAREHOUSE = 'MCP_QUERY_WH'
+    DEFAULT_NAMESPACE = 'PRD_ANALYTICS.FOOTBALL_GOLD'
     MUST_CHANGE_PASSWORD = FALSE
     COMMENT = 'Service account for Claude MCP connections — not a personal login';
+
+-- DEFAULT_NAMESPACE lets the agent write unqualified table names
+-- (`dim_players`, not `prd_analytics.football_gold.dim_players`). This
+-- user exists only for this one dataset, so a fixed default is the
+-- simplest correct option. CREATE ... IF NOT EXISTS won't add it to the
+-- existing user on a re-run; this does, and is idempotent.
+ALTER USER CLAUDE_MCP_USER SET DEFAULT_NAMESPACE = 'PRD_ANALYTICS.FOOTBALL_GOLD';
 
 USE ROLE SECURITYADMIN;
 -- USAGE on the MCP server object itself is a SEPARATE grant from

@@ -37,6 +37,16 @@ DEFAULT_MODEL = "claude-sonnet-5-5"
 # tools mcp__<server>__<tool>.
 SQL_TOOL = "mcp__snowflake__sql_exec_tool"
 REQUIRED_ENV = ["SNOWFLAKE_MCP_URL", "SNOWFLAKE_MCP_PAT", "ANTHROPIC_API_KEY"]
+# Oldest Claude Code with every flag used below and a fully isolated --bare.
+MIN_CLAUDE_VERSION = (2, 1, 286)
+
+
+def claude_version() -> tuple[int, ...] | None:
+    # "2.1.234 (Claude Code)" -> (2, 1, 234); None if claude isn't installed.
+    output = command_output(["claude", "--version"])
+    if not output:
+        return None
+    return tuple(int(part) for part in output.split()[0].split("."))
 
 
 def parse_args() -> argparse.Namespace:
@@ -289,6 +299,18 @@ def main() -> int:
         print(
             f"Missing environment variables: {', '.join(missing)}. "
             "Run via `uv run --env-file secrets/.env.eval ...` (see evals/README.md).",
+            file=sys.stderr,
+        )
+        return 2
+
+    # Stop early if Claude Code is missing or too old for the flags we use.
+    version = claude_version()
+    if version is None or version < MIN_CLAUDE_VERSION:
+        found = ".".join(map(str, version)) if version else "not found"
+        needed = ".".join(map(str, MIN_CLAUDE_VERSION))
+        print(
+            f"Claude Code {needed} or later is required (found: {found}). "
+            "Run `claude update`.",
             file=sys.stderr,
         )
         return 2

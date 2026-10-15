@@ -32,6 +32,20 @@ A small, versioned answer key for testing an LLM agent that answers
 natural-language questions against the Snowflake gold layer through the
 `Football_Snowflake` MCP connector.
 
+## How it fits together
+
+```mermaid
+flowchart TB
+  Q["questions.yaml: answer key"] --> RE["run_evals.py: orchestrator"]
+  RE -- "one trial at a time" --> CC["Claude Code, headless: prompt.md + mcp.json"]
+  CC -- "SQL as SVC_FOOTBALL_EVAL" --> SF["Snowflake MCP server: CLAUDE_MCP_ROLE on MCP_QUERY_WH"]
+  SF -- "rows" --> CC
+  CC -- "transcript" --> RE
+  RE --> GR["grading.py: answer check + grounding check"]
+  GR --> LG["evals/runs: raw, results.jsonl, manifest.json"]
+  LG --> S["Summary: pass@1, pass@3, pass^3, cost"]
+```
+
 ## `questions.yaml`
 
 Each entry has the question, an `expected` answer, the `sql` that produced

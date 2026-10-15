@@ -10,7 +10,7 @@ Two checks decide whether a trial passes (see evals/README.md):
 """
 
 import json  # turns JSON text into Python dicts/lists
-import re  # regular expressions, like Snowflake's REGEXP_SUBSTR
+import re  # regular expressions: pattern matching on text
 
 # A line that starts with "ANSWER:" (any case); (.+?) captures what follows.
 ANSWER_LINE = re.compile(r"^\s*ANSWER:\s*(.+?)\s*$", re.IGNORECASE)
@@ -118,7 +118,7 @@ def _flatten_tool_content(content) -> str:
         return ""
     if isinstance(content, str):  # already a string: use as is
         return content
-    # list comprehension: take the "text" from each block, like SELECT text FROM blocks
+    # list comprehension: take the "text" from each block that is a dict
     parts = [b.get("text", "") for b in content if isinstance(b, dict)]
     return "\n".join(parts)  # glue them together with newlines
 
@@ -136,7 +136,9 @@ def _parse_snowflake_result(text: str | None) -> dict:
         return parsed  # keep the defaults rather than crash
     if not isinstance(payload, dict):
         return parsed
-    rows = (payload.get("result_set") or {}).get("data")  # like payload:result_set:data
+    rows = (payload.get("result_set") or {}).get(
+        "data"
+    )  # payload["result_set"]["data"], or None if missing
     parsed["query_id"] = payload.get("query_id")
     if isinstance(rows, list):
         parsed["rows"] = rows
@@ -193,15 +195,15 @@ def _value_in_result(target: dict, answer_type: str, rows) -> bool:
     if answer_type == "number":
         want = float(target["value"])
         for cell in cells:
-            if cell is None:  # SQL NULL
+            if cell is None:  # empty cell
                 continue
             for match in NUMBER.findall(str(cell)):  # every number in the cell
                 if abs(float(match.replace(",", "")) - want) <= target["tolerance"]:
                     return True
         return False
-    # Names: case-insensitive "contains", like ILIKE '%chelsea football club%'
+    # Names: case-insensitive "contains" check
     want_text = str(target["value"]).casefold()
-    # any(...) = True if at least one cell matches, like EXISTS in SQL
+    # any(...) = True if at least one cell matches
     return any(cell is not None and want_text in str(cell).casefold() for cell in cells)
 
 

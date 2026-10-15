@@ -217,7 +217,7 @@ def summarise(rows: list[dict], trials: int) -> dict:
     """Per-question and overall scores. pass@k and pass^k as defined in
     Anthropic's evals guidance: at least one of k trials passed, and all k
     trials passed (the consistency measure)."""
-    # Group rows by question, like GROUP BY question_id.
+    # Group rows into a dict: question_id -> list of that question's rows.
     by_question: dict[str, list[dict]] = {}
     for row in rows:
         by_question.setdefault(row["question_id"], []).append(row)

@@ -177,6 +177,9 @@ def is_grounded(question: dict, sql_calls: list[dict]) -> bool | None:
         for call in sql_calls:  # each query the agent ran
             if call.get("is_error"):  # failed queries don't count as evidence
                 continue
+            sql = (call.get("sql") or "").lower().strip()
+            if sql.startswith(("show", "desc")) or "information_schema" in sql:
+                continue  # metadata queries don't count as evidence
             if _value_in_result(target, question["answer_type"], call.get("rows")):
                 return True  # found it: stop looking
     return False  # checked everything, value never appeared in any result

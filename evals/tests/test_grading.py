@@ -157,6 +157,18 @@ def test_not_grounded_when_value_only_in_sql_text():
     assert not is_grounded(NUMBER_Q, calls)
 
 
+def test_metadata_query_is_not_grounding():
+    # Ordinal position 36 is in the rows, but describes structure, not data.
+    sql = "select column_name, ordinal_position from information_schema.columns"
+    calls = extract_sql_calls(transcript(sql, [["TOTAL_GOALS", "36"]]), TOOL)
+    assert not is_grounded(NUMBER_Q, calls)
+
+
+def test_show_query_is_not_grounding():
+    calls = extract_sql_calls(transcript("\n  SHOW TABLES", [["36"]]), TOOL)
+    assert not is_grounded(NUMBER_Q, calls)
+
+
 def test_grounded_via_alternative_value():
     calls = extract_sql_calls(transcript("select avg(fee)", [["6526704.08"]]), TOOL)
     assert is_grounded(DECIMAL_Q, calls)

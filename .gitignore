@@ -28,3 +28,6 @@ secrets/
 # contain nested .git dirs and shouldn't ever be tracked). Nothing in
 # here is meant to be shared or committed.
 .claude/
+# Eval runs are local-only (see evals/README.md). The 15 Oct 2026 baseline
+# was committed before this rule and stays tracked as a reference.
+/evals/runs

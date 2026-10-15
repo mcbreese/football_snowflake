@@ -123,13 +123,17 @@ run (`--max-total-usd`, default 10).
 
 ## Logs
 
-Every run writes to `evals/runs/<UTC timestamp>_<git sha>/`:
+Every run writes to `evals/runs/<UTC timestamp>_<git sha>/`. **Runs are
+local-only:** `evals/runs/` is gitignored. The one exception is the
+15 Oct 2026 baseline (`20261015T134903Z_cc0b1c0c`, without its `raw/`
+folder), committed before the ignore rule as a reference point. Record
+later results in the project's notes, not in git.
 
-| File | Contents | In git? |
-|---|---|---|
-| `raw/<qid>_t<n>.jsonl` | The complete stream-json transcript of each trial: every model turn, tool call and Snowflake reply | No (bulky; kept locally for later loading) |
-| `results.jsonl` | One graded row per trial: answer, both checks, SQL run with Snowflake `query_id`s, tokens, cost, errors | Yes |
-| `manifest.json` | Run configuration, versions (git SHA, model, Claude Code version, answer key and prompt hashes) and summary scores | Yes |
+| File | Contents |
+|---|---|
+| `raw/<qid>_t<n>.jsonl` | The complete stream-json transcript of each trial: every model turn, tool call and Snowflake reply |
+| `results.jsonl` | One graded row per trial: answer, both checks, SQL run with Snowflake `query_id`s, tokens, cost, errors |
+| `manifest.json` | Run configuration, versions (git SHA, model, Claude Code version, answer key and prompt hashes) and summary scores |
 
 The logs are JSONL so a crashed run still leaves valid rows, and so
 Snowflake can load them directly (`COPY INTO` a VARIANT column) when they're

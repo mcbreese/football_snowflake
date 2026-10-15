@@ -54,8 +54,12 @@ trial starts a fresh session.
 
 **Run it locally, not in a cloud session.** One-time setup:
 
-- **Snowflake login for scripts.** The script needs non-interactive access
-  for `CLAUDE_MCP_USER`. See `snowflake/mcp/`.
+- **Snowflake login for scripts.** Run `snowflake/mcp/mcp_eval_access.sql`.
+  It creates `SVC_FOOTBALL_EVAL`, a service user with `CLAUDE_MCP_ROLE`, a
+  network policy for your IP and a 30-day token. It's a separate user from
+  the Claude.ai connector's `CLAUDE_MCP_USER`, because a token needs a
+  network policy and a network policy would block the connector. The
+  script's header explains this in full.
 - **`secrets/.env.eval`** (gitignored, never committed) must define:
   - `SNOWFLAKE_MCP_URL`, set to
     `https://<account>.snowflakecomputing.com/api/v2/databases/PRD_ANALYTICS/schemas/FOOTBALL_GOLD/mcp-servers/FOOTBALL_MCP_SERVER`.

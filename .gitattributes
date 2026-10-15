@@ -6,3 +6,8 @@
 # pre-commit hooks that shell out to them
 # (dbt_football_snowflake/.hooks/*.sh).
 *.sh text eol=lf
+
+# GitHub's language bar (Linguist) treats SQL as a "data" language and
+# leaves it out by default, so the dbt models - most of this repo - were
+# invisible. linguist-detectable opts .sql files back in to the stats.
+*.sql linguist-detectable

@@ -16,8 +16,9 @@
 -- Naming: SVC_<WORKLOAD>. Older users in this project (CLAUDE_SERVICE,
 -- CLAUDE_MCP_USER) predate the convention and are left as they are.
 --
--- Cost control: queries run on MCP_QUERY_WH, so the warehouse's existing
--- resource monitor (hard credit cap) covers eval runs too.
+-- Cost control: queries run on MCP_QUERY_WH, so the warehouse's resource
+-- monitor (mcp_resource_monitor.sql) caps eval spend too. Run that file
+-- first: on 15 Oct no monitor was attached to this warehouse.
 --
 -- Verify against current Snowflake docs before running: PAT syntax
 -- (ADD PROGRAMMATIC ACCESS TOKEN) and the network policy requirement are

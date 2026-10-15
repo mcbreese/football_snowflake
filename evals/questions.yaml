@@ -1,0 +1,282 @@
+# Answer key for the football evals baseline. See evals/README.md for the
+# grading rules and how this file was verified.
+#
+# Every expected answer was produced by `sql` and independently reproduced
+# by `cross_check_sql` (written a different way), both run through the
+# Football_Snowflake MCP connector as CLAUDE_MCP_USER / CLAUDE_MCP_ROLE, i.e.
+# the same grants the agent under test has.
+
+version: 1
+verified_at: "2026-10-15"
+# max(loaded_timestamp) on dim_players at verification time. If prod's
+# value has moved on, re-run every `sql` below before trusting a score.
+data_snapshot: "2026-09-10 08:55:21.735"
+
+# The agent's reply must end with exactly one line in this form, so grading
+# is a string comparison, not a judgement call.
+answer_format: |
+  ANSWER: <value>
+  For a question the data can't answer, or that has no single correct
+  answer, the last line must be: ANSWER: REFUSE
+
+questions:
+  - id: L1
+    category: lookup
+    question: >-
+      How many Premier League goals did Erling Haaland score in the 2022/23
+      season?
+    answer_type: number
+    expected: 36
+    tolerance: 0
+    sql: |
+      select f.total_goals
+      from prd_analytics.football_gold.fct_player_performance_per_season_competition as f
+      inner join prd_analytics.football_gold.dim_players as p
+          on f.player_id = p.player_id
+      where p.player_name = 'Erling Haaland'
+        and f.competition_name = 'premier-league'
+        and f.season = 2022
+    cross_check_sql: |
+      select sum(total_goals)
+      from prd_analytics.football_gold.fct_player_performance_per_season_competition
+      where player_id = 418560
+        and competition_name = 'premier-league'
+        and season = 2022
+    notes: >-
+      Trap: `season` is the starting year, so 2022/23 is season = 2022.
+      Season 2023 gives 27, which is the likely wrong answer.
+
+  - id: L2
+    category: lookup
+    question: Which foot does Bukayo Saka prefer?
+    answer_type: name
+    expected: left
+    accept: [left, left foot, left-footed]
+    sql: |
+      select foot
+      from prd_analytics.football_gold.dim_players
+      where player_name = 'Bukayo Saka'
+    cross_check_sql: |
+      select any_value(foot), count(*)
+      from prd_analytics.football_gold.dim_players
+      where lower(player_name) like '%bukayo%saka%'
+    notes: >-
+      Cross-check confirms exactly one matching player. 525 player names in
+      dim_players are duplicated, so name uniqueness can't be assumed.
+
+  - id: A1
+    category: aggregation
+    question: >-
+      In the 2023/24 season, which player scored the most goals in a single
+      competition?
+    answer_type: name
+    expected: Harry Kane
+    accept: [Harry Kane, Kane]
+    sql: |
+      select p.player_name, f.competition_name, f.total_goals
+      from prd_analytics.football_gold.fct_player_performance_per_season_competition as f
+      inner join prd_analytics.football_gold.dim_players as p
+          on f.player_id = p.player_id
+      where f.season = 2023
+      order by f.total_goals desc
+      limit 1
+    cross_check_sql: |
+      select count(*) as ties, max(total_goals), any_value(player_id)
+      from prd_analytics.football_gold.fct_player_performance_per_season_competition
+      where season = 2023
+        and total_goals = (
+            select max(total_goals)
+            from prd_analytics.football_gold.fct_player_performance_per_season_competition
+            where season = 2023
+        )
+    notes: >-
+      36 goals in the Bundesliga. Cross-check confirms no tie at the top
+      (ties = 1). "In a single competition" rules out summing across
+      competitions.
+
+  - id: A2
+    category: aggregation
+    question: >-
+      How many transfers dated between 1 July 2023 and 30 June 2024
+      (inclusive) had a fee greater than zero?
+    answer_type: number
+    expected: 1306
+    tolerance: 0
+    sql: |
+      select count(*)
+      from prd_analytics.football_gold.fct_player_transfers
+      where transfer_date between '2023-07-01' and '2024-06-30'
+        and transfer_fee > 0
+    cross_check_sql: |
+      select sum(iff(coalesce(transfer_fee, 0) > 0, 1, 0))
+      from prd_analytics.football_gold.fct_player_transfers
+      where transfer_date >= '2023-07-01'
+        and transfer_date < '2024-07-01'
+    notes: >-
+      Trap: of 8,523 transfers in the window, 1,947 have a null fee and
+      5,270 have a fee of exactly 0. "Has a fee" counted as non-null gives
+      6,576, the likely wrong answer. Uses dates, not transfer_season,
+      because transfer_season '23/24' covers dates from 2023-01-01 to
+      2025-06-30.
+
+  - id: A3
+    category: aggregation
+    question: >-
+      What was the average fee, in millions of euros to one decimal place,
+      of transfers dated between 1 July 2023 and 30 June 2024 (inclusive)
+      with a fee greater than zero?
+    answer_type: number
+    expected: 6.5
+    tolerance: 0.05
+    sql: |
+      select round(avg(transfer_fee) / 1000000, 1)
+      from prd_analytics.football_gold.fct_player_transfers
+      where transfer_date between '2023-07-01' and '2024-06-30'
+        and transfer_fee > 0
+    cross_check_sql: |
+      select round(sum(transfer_fee) / count_if(transfer_fee > 0) / 1000000, 1)
+      from prd_analytics.football_gold.fct_player_transfers
+      where transfer_date >= '2023-07-01'
+        and transfer_date < '2024-07-01'
+    notes: >-
+      Unrounded: 6,526,704 EUR. Averaging every non-null fee (zeros
+      included) gives 1.3, the likely wrong answer.
+
+  - id: A4
+    category: aggregation
+    question: >-
+      How many distinct players made at least one Premier League appearance
+      in the 2023/24 season?
+    answer_type: number
+    expected: 570
+    tolerance: 0
+    sql: |
+      select count(distinct player_id)
+      from prd_analytics.football_gold.fct_player_performance_per_season_competition
+      where season = 2023
+        and competition_name = 'premier-league'
+    cross_check_sql: |
+      select count(*)
+      from (
+          select player_id
+          from prd_analytics.football_gold.fct_player_performance_per_season_competition
+          where season = 2023
+            and competition_name = 'premier-league'
+          group by player_id
+          having sum(total_appearances) > 0
+      )
+    notes: >-
+      Rows and distinct players are both 570 here (one row per player per
+      season per competition), so this mainly tests the season convention.
+
+  - id: J1
+    category: join
+    question: >-
+      Which club had the highest total incoming transfer fees for transfers
+      dated between 1 July 2023 and 30 June 2024 (inclusive)?
+    answer_type: name
+    expected: Chelsea Football Club
+    accept: [Chelsea, Chelsea FC, Chelsea Football Club]
+    sql: |
+      select c.name, sum(t.transfer_fee) as total_incoming_fees
+      from prd_analytics.football_gold.fct_player_transfers as t
+      inner join prd_analytics.football_gold.dim_clubs as c
+          on t.to_club_id = c.club_id
+      where t.transfer_date between '2023-07-01' and '2024-06-30'
+      group by c.name
+      order by total_incoming_fees desc
+      limit 1
+    cross_check_sql: |
+      select x.to_club_id, x.total_incoming_fees, c.name
+      from (
+          select to_club_id, sum(transfer_fee) as total_incoming_fees
+          from prd_analytics.football_gold.fct_player_transfers
+          where transfer_date >= '2023-07-01'
+            and transfer_date < '2024-07-01'
+          group by to_club_id
+          order by total_incoming_fees desc nulls last
+          limit 1
+      ) as x
+      left join prd_analytics.football_gold.dim_clubs as c
+          on x.to_club_id = c.club_id
+    notes: >-
+      EUR 464.1m (club_id 631), ahead of Paris Saint-Germain on EUR 454.5m,
+      a narrow margin. The cross-check groups by id before joining, which
+      proves the top spender exists in dim_clubs (3,027 of 8,516 '23/24'
+      transfers go to clubs that don't).
+
+  - id: J2
+    category: join
+    question: >-
+      Which nationality had the most distinct players with a Premier League
+      appearance in the 2023/24 season?
+    answer_type: name
+    expected: England
+    accept: [England, English]
+    sql: |
+      select p.nationality, count(distinct f.player_id) as players
+      from prd_analytics.football_gold.fct_player_performance_per_season_competition as f
+      inner join prd_analytics.football_gold.dim_players as p
+          on f.player_id = p.player_id
+      where f.season = 2023
+        and f.competition_name = 'premier-league'
+      group by p.nationality
+      order by players desc
+      limit 1
+    cross_check_sql: |
+      select nationality, count(*) as players
+      from prd_analytics.football_gold.dim_players
+      where player_id in (
+          select player_id
+          from prd_analytics.football_gold.fct_player_performance_per_season_competition
+          where season = 2023
+            and competition_name = 'premier-league'
+      )
+      group by nationality
+      order by players desc
+      limit 1
+    notes: >-
+      192 players, far ahead of Brazil (33). "United Kingdom" or "British"
+      should fail: the data uses England.
+
+  - id: T1
+    category: time
+    question: How many transfers are dated in July 2024?
+    answer_type: number
+    expected: 3117
+    tolerance: 0
+    sql: |
+      select count(*)
+      from prd_analytics.football_gold.fct_player_transfers
+      where transfer_date between '2024-07-01' and '2024-07-31'
+    cross_check_sql: |
+      select count(*)
+      from prd_analytics.football_gold.fct_player_transfers
+      where transfer_date_key between 20240701 and 20240731
+    notes: >-
+      1,830 of these are dated 1 July (the bulk contract start date). The
+      cross-check uses the integer date key, an independent column.
+
+  - id: R1
+    category: refuse
+    question: What is Bukayo Saka's weekly wage?
+    answer_type: refuse
+    expected: REFUSE
+    sql: |
+      select count(*)
+      from prd_analytics.information_schema.columns
+      where table_schema = 'FOOTBALL_GOLD'
+        and (column_name ilike '%wage%' or column_name ilike '%salary%')
+    notes: >-
+      Returns 0: no wage or salary data exists. Passing means refusing, not
+      substituting market value or transfer fee for a wage.
+
+  - id: R2
+    category: refuse
+    question: Who is the best player in the Premier League?
+    answer_type: refuse
+    expected: REFUSE
+    notes: >-
+      There's no agreed definition of "best". Passing means refusing or
+      asking which measure to use. Picking a top scorer and presenting it
+      as "the best player" fails.

@@ -1,5 +1,32 @@
 # Football evals
 
+## Commands
+
+Run every command from the repo root.
+
+| I want to... | Command |
+|---|---|
+| See every option the script has | `uv run python evals/run_evals.py --help` |
+| Check it loads, with no calls and no cost | `uv run python evals/run_evals.py --dry-run --only L1` |
+| Pilot: one question, once | `uv run --env-file secrets/.env.eval python evals/run_evals.py --only L1 --trials 1` |
+| Run a few questions | `uv run --env-file secrets/.env.eval python evals/run_evals.py --only L1 A3 R1` |
+| Full baseline: every question, 3 times | `uv run --env-file secrets/.env.eval python evals/run_evals.py` |
+| Run the tests (no secrets needed) | `uv run pytest evals/tests` |
+
+How a command is built:
+
+```
+uv run   --env-file secrets/.env.eval   python evals/run_evals.py   --only L1 --trials 1
+  1                  2                             3                         4
+```
+
+1. `uv run`: use this project's Python and packages.
+2. `--env-file ...`: load the secrets for this one command only. Leave it out
+   when no secrets are needed (`--dry-run`, `--help`, tests).
+3. `python <file>`: the script to run.
+4. Flags: the script's own options. `--help` lists them, so there's no need
+   to memorise them.
+
 A small, versioned answer key for testing an LLM agent that answers
 natural-language questions against the Snowflake gold layer through the
 `Football_Snowflake` MCP connector.

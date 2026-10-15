@@ -28,6 +28,82 @@ The agent's reply must end with `ANSWER: <value>` (or `ANSWER: REFUSE`).
 | `name` | it matches any value in `accept`, case-insensitive |
 | `refuse` | the answer is exactly `REFUSE` |
 
+**Grounding check.** For every answerable question, the expected value
+(or an alternative listed under `grounding`) must also appear in the rows
+returned by at least one SQL query the agent actually ran. This catches
+answers recalled from training data: famous facts like Haaland's 36 goals
+can be "known" without querying. A trial passes only when both checks
+pass. Both are logged separately, so a gap between the answer-only score
+and the grounded score shows how often the agent is guessing.
+
+**Scores.**
+
+- **pass@1** is the share of all trials that passed.
+- **pass@3** is the share of questions that passed at least once in 3
+  trials.
+- **pass^3** is the share of questions that passed all 3 trials. This is
+  the consistency measure. A data agent that's right two times in three
+  isn't one people can rely on.
+
+## Running the evals (`run_evals.py`)
+
+Each question runs through headless Claude Code (`claude --bare -p`),
+connected only to Snowflake's managed MCP server, the same server the
+Claude.ai connector uses, with every built-in tool switched off. Every
+trial starts a fresh session.
+
+**Run it locally, not in a cloud session.** One-time setup:
+
+- **Snowflake login for scripts.** The script needs non-interactive access
+  for `CLAUDE_MCP_USER`. See `snowflake/mcp/`.
+- **`secrets/.env.eval`** (gitignored, never committed) must define:
+  - `SNOWFLAKE_MCP_URL`, set to
+    `https://<account>.snowflakecomputing.com/api/v2/databases/PRD_ANALYTICS/schemas/FOOTBALL_GOLD/mcp-servers/FOOTBALL_MCP_SERVER`.
+    Use hyphens, not underscores, in the account host.
+  - `SNOWFLAKE_MCP_PAT`, the token.
+  - `ANTHROPIC_API_KEY`. `--bare` never reads a stored login, so the key
+    has to be in the environment.
+
+Then:
+
+```
+uv run --env-file secrets/.env.eval python evals/run_evals.py --only L1 --trials 1   # pilot: check cost and wiring
+uv run --env-file secrets/.env.eval python evals/run_evals.py                       # full baseline: 11 x 3
+uv run python evals/run_evals.py --dry-run                                          # print commands only
+```
+
+Spending is capped per trial (`--max-budget-usd`, default 0.50) and per
+run (`--max-total-usd`, default 10).
+
+## Logs
+
+Every run writes to `evals/runs/<UTC timestamp>_<git sha>/`:
+
+| File | Contents | In git? |
+|---|---|---|
+| `raw/<qid>_t<n>.jsonl` | The complete stream-json transcript of each trial: every model turn, tool call and Snowflake reply | No (bulky; kept locally for later loading) |
+| `results.jsonl` | One graded row per trial: answer, both checks, SQL run with Snowflake `query_id`s, tokens, cost, errors | Yes |
+| `manifest.json` | Run configuration, versions (git SHA, model, Claude Code version, answer key and prompt hashes) and summary scores | Yes |
+
+The logs are JSONL so a crashed run still leaves valid rows, and so
+Snowflake can load them directly (`COPY INTO` a VARIANT column) when they're
+later analysed alongside the football data. Any occurrence of the Snowflake
+token or API key is replaced with `[REDACTED]` before anything is written.
+
+**Snowflake cost for a run.** Run this as an admin role, not the agent's.
+`ACCOUNT_USAGE` lags by up to about 3 hours.
+
+```sql
+select sum(credits_used) as credits
+from snowflake.account_usage.warehouse_metering_history
+where warehouse_name = 'MCP_QUERY_WH'
+  and start_time >= '<manifest started_at>'
+  and end_time <= dateadd(hour, 1, '<manifest ended_at>');
+```
+
+Per-query detail: join the `query_id`s in `results.jsonl` to
+`snowflake.account_usage.query_history`.
+
 ## Authorship
 
 The questions were chosen and reviewed by Tom. The SQL was drafted by

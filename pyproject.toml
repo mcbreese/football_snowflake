@@ -9,6 +9,7 @@ dependencies = [
     "dbt-snowflake>=1.12.0",
     "kagglehub>=0.3.0",
     "boto3>=1.43.0",
+    "pyyaml>=6.0.3",
 ]
 
 [dependency-groups]
@@ -25,4 +26,4 @@ dev = [
 target-version = ["py312"]
 
 [tool.pytest.ini_options]
-testpaths = ["extraction/tests"]
+testpaths = ["extraction/tests", "evals/tests"]

@@ -28,3 +28,7 @@ secrets/
 # contain nested .git dirs and shouldn't ever be tracked). Nothing in
 # here is meant to be shared or committed.
 .claude/
+# Eval run transcripts (evals/runs/<run_id>/raw/): the full "log everything"
+# layer, bulky and not reviewed in PRs. Kept locally for later loading into
+# Snowflake; results.jsonl and manifest.json beside it ARE committed.
+evals/runs/*/raw/

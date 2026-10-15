@@ -32,3 +32,4 @@ secrets/
 # layer, bulky and not reviewed in PRs. Kept locally for later loading into
 # Snowflake; results.jsonl and manifest.json beside it ARE committed.
 evals/runs/*/raw/
+/evals/runs

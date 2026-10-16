@@ -15,6 +15,7 @@ import os  # reads environment variables (the secrets)
 import subprocess  # starts other programs, here `claude`
 import sys
 import time  # a stopwatch for durations
+from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 from datetime import datetime, timezone
 from pathlib import Path  # file paths: Path / "folder" / "file"
 
@@ -90,6 +91,13 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--timeout", type=int, default=300, help="Seconds before a trial is killed"
+    )
+    parser.add_argument(
+        "--concurrency",
+        type=int,
+        default=4,
+        help="Trials run at the same time (default 4). Higher is faster but "
+        "risks API rate limits and queueing on the Snowflake warehouse",
     )
     parser.add_argument(
         "--dry-run",
@@ -192,13 +200,7 @@ def run_trial(
     if stderr.strip():
         raw_path.with_suffix(".stderr.txt").write_text(stderr)
 
-    # The transcript is one JSON object per line: turn each into a dict.
-    events = []
-    for line in stdout.splitlines():
-        try:
-            events.append(json.loads(line))
-        except json.JSONDecodeError:
-            continue  # stray non-JSON output; it's still in the raw file
+    events = parse_events(stdout)
 
     # next(...) = first event matching the condition, or {} if none.
     # init: the first event (which MCP servers connected).
@@ -209,19 +211,6 @@ def run_trial(
         error = f"no result event (exit code {exit_code})"
     elif result.get("is_error") and error is None:
         error = result.get("subtype") or "result marked is_error"
-
-    # Grading: all of these functions live in grading.py.
-    final_text = result.get("result")  # the agent's final reply text
-    parsed = parse_answer(final_text)
-    sql_calls = extract_sql_calls(events, SQL_TOOL)
-    answer_pass = grade_answer(question, parsed)
-    # Which accepted reading the answer matched (None if it matched none).
-    # Grounding then checks that reading's value, not any reading's.
-    reading = matched_reading(question, parsed)
-    grounded = is_grounded(reading or question, sql_calls)
-    # Refusals have nothing to ground (grounded is None), so they pass on
-    # the answer alone. Everything else needs both checks.
-    passed = answer_pass and (grounded is None or grounded)
 
     usage = result.get("usage") or {}
     # One row for results.jsonl. **base copies in the run-level columns.
@@ -235,6 +224,49 @@ def run_trial(
         "duration_ms": round((time.monotonic() - clock) * 1000),
         "session_id": result.get("session_id") or init.get("session_id"),
         "mcp_servers": init.get("mcp_servers"),
+        **grade_events(question, events),  # the grading columns, see below
+        "num_turns": result.get("num_turns"),
+        "input_tokens": usage.get("input_tokens"),
+        "output_tokens": usage.get("output_tokens"),
+        "cache_read_tokens": usage.get("cache_read_input_tokens"),
+        "cache_creation_tokens": usage.get("cache_creation_input_tokens"),
+        "total_cost_usd": result.get("total_cost_usd"),
+        "permission_denials": result.get("permission_denials"),
+        "exit_code": exit_code,
+        "error": error,
+        "raw_file": raw_path.relative_to(run_dir).as_posix(),  # / on any OS
+    }
+
+
+def parse_events(stdout: str) -> list[dict]:
+    """The transcript is one JSON object per line: turn each into a dict."""
+    events = []
+    for line in stdout.splitlines():
+        try:
+            events.append(json.loads(line))
+        except json.JSONDecodeError:
+            continue  # stray non-JSON output; it's still in the raw file
+    return events
+
+
+def grade_events(question: dict, events: list[dict]) -> dict:
+    """Grade one trial's transcript and return the grading columns of its
+    results row. Kept separate from running the trial so that regrade.py
+    can re-score saved transcripts with exactly the same code."""
+    result = next((e for e in reversed(events) if e.get("type") == "result"), {})
+    # Grading: all of these functions live in grading.py.
+    final_text = result.get("result")  # the agent's final reply text
+    parsed = parse_answer(final_text)
+    sql_calls = extract_sql_calls(events, SQL_TOOL)
+    answer_pass = grade_answer(question, parsed)
+    # Which accepted reading the answer matched (None if it matched none).
+    # Grounding then checks that reading's value, not any reading's.
+    reading = matched_reading(question, parsed)
+    grounded = is_grounded(reading or question, sql_calls)
+    # Refusals have nothing to ground (grounded is None), so they pass on
+    # the answer alone. Everything else needs both checks.
+    passed = answer_pass and (grounded is None or grounded)
+    return {
         # One value, or a list when the question has several readings
         "expected": (
             [r["expected"] for r in readings(question)]
@@ -247,22 +279,12 @@ def run_trial(
         "answer_pass": answer_pass,
         "grounded": grounded,
         "pass": passed,
-        "num_turns": result.get("num_turns"),
         "num_tool_calls": len(sql_calls),
         # Keep rows out of the summary log; they're in the raw transcript.
         "sql_calls": [
             {k: c[k] for k in ("sql", "query_id", "row_count", "is_error")}
             for c in sql_calls
         ],
-        "input_tokens": usage.get("input_tokens"),
-        "output_tokens": usage.get("output_tokens"),
-        "cache_read_tokens": usage.get("cache_read_input_tokens"),
-        "cache_creation_tokens": usage.get("cache_creation_input_tokens"),
-        "total_cost_usd": result.get("total_cost_usd"),
-        "permission_denials": result.get("permission_denials"),
-        "exit_code": exit_code,
-        "error": error,
-        "raw_file": str(raw_path.relative_to(run_dir)),
     }
 
 
@@ -314,6 +336,57 @@ def summarise(rows: list[dict], trials: int) -> dict:
     }
 
 
+def run_jobs(jobs, run_one, results_path: Path, concurrency: int, max_total_usd):
+    """Run (question, trial) jobs, up to `concurrency` at once, writing each
+    row to results.jsonl as it finishes. Returns (rows, stopped_early).
+
+    Trials run in worker threads, but only this function writes the file,
+    so rows can never interleave. Rows land in finishing order, not
+    question order; each row says which question and trial it is.
+    """
+    rows: list[dict] = []
+    spent = 0.0  # running cost, checked against --max-total-usd
+    stopped_early = None
+    pending = list(jobs)  # jobs not started yet
+    running = {}  # future -> job, for the trials in flight
+    with (
+        ThreadPoolExecutor(max_workers=concurrency) as pool,
+        results_path.open("a") as results_file,
+    ):
+        while pending or running:
+            # Start trials until `concurrency` are in flight. The spend cap is
+            # only checked here, so trials already running can overshoot it
+            # by up to `concurrency` trials' worth.
+            while pending and len(running) < concurrency:
+                if spent >= max_total_usd:
+                    stopped_early = f"max_total_usd {max_total_usd} reached"
+                    pending.clear()
+                    break
+                question, trial = pending.pop(0)
+                running[pool.submit(run_one, question, trial)] = (question, trial)
+            if not running:
+                break
+            # Wait for at least one trial to finish, then record it.
+            done, _ = wait(running, return_when=FIRST_COMPLETED)
+            for future in done:
+                question, trial = running.pop(future)
+                row = future.result()
+                rows.append(row)
+                # Written and flushed per trial, so a crash keeps every
+                # finished row.
+                results_file.write(json.dumps(row) + "\n")
+                results_file.flush()
+                spent += row["total_cost_usd"] or 0
+                status = "PASS" if row["pass"] else "fail"
+                print(
+                    f"{question['id']} t{trial}: {status:4}  answer={row['parsed_answer']!r} "
+                    f"grounded={row['grounded']}  ${row['total_cost_usd'] or 0:.4f}"
+                    + (f"  ERROR: {row['error']}" if row["error"] else ""),
+                    flush=True,
+                )
+    return rows, stopped_early
+
+
 def main() -> int:
     args = parse_args()
     # 1. Load the answer key and pick the questions to run.
@@ -324,6 +397,9 @@ def main() -> int:
         print(f"No questions match --only {args.only}", file=sys.stderr)
         return 2
 
+    if args.concurrency < 1:
+        print("--concurrency must be at least 1", file=sys.stderr)
+        return 2
     if args.context and not args.context.is_file():
         print(f"--context file not found: {args.context}", file=sys.stderr)
         return 2
@@ -395,6 +471,7 @@ def main() -> int:
         "question_ids": [q["id"] for q in questions],
         "max_budget_usd_per_trial": args.max_budget_usd,
         "max_total_usd": args.max_total_usd,
+        "concurrency": args.concurrency,
         "mcp_server_url_host": os.environ["SNOWFLAKE_MCP_URL"].split("/")[2],
     }
     manifest_path = run_dir / "manifest.json"
@@ -403,30 +480,14 @@ def main() -> int:
     )  # written now, completed at the end
 
     # 5. The main loop: every question x every trial.
-    rows: list[dict] = []
-    spent = 0.0  # running cost, checked against --max-total-usd
-    stopped_early = None
-    with (run_dir / "results.jsonl").open("a") as results_file:
-        for question in questions:
-            for trial in range(1, args.trials + 1):
-                if spent >= args.max_total_usd:
-                    stopped_early = f"max_total_usd {args.max_total_usd} reached"
-                    break
-                row = run_trial(question, trial, args, run_dir, base, prompt_path)
-                rows.append(row)
-                # Written and flushed per trial, so a crash keeps every
-                # finished row.
-                results_file.write(json.dumps(row) + "\n")
-                results_file.flush()
-                spent += row["total_cost_usd"] or 0
-                status = "PASS" if row["pass"] else "fail"
-                print(
-                    f"{question['id']} t{trial}: {status:4}  answer={row['parsed_answer']!r} "
-                    f"grounded={row['grounded']}  ${row['total_cost_usd'] or 0:.4f}"
-                    + (f"  ERROR: {row['error']}" if row["error"] else "")
-                )
-            if stopped_early:
-                break
+    jobs = [(q, t) for q in questions for t in range(1, args.trials + 1)]
+    rows, stopped_early = run_jobs(
+        jobs,
+        lambda q, t: run_trial(q, t, args, run_dir, base, prompt_path),
+        run_dir / "results.jsonl",
+        args.concurrency,
+        args.max_total_usd,
+    )
 
     # 6. Add the summary scores to the manifest and print them.
     manifest.update(

@@ -15,6 +15,7 @@ Run every command from the repo root.
 | Run the hint-free set with a context file | `uv run --env-file secrets/.env.eval python evals/run_evals.py --questions evals/questions_hard.yaml --context evals/context.md` |
 | Read a run's results, nicely indented | `uv run python -m json.tool --json-lines evals/runs/<run folder>/results.jsonl` |
 | See why trials failed: answer, reading, checks and the SQL run | `uv run python evals/show_failures.py evals/runs/<run folder>` |
+| Re-score a run after a grading change (free, no calls) | `uv run python evals/regrade.py evals/runs/<run folder>` |
 | Run the tests (no secrets needed) | `uv run pytest evals/tests` |
 
 How a command is built:
@@ -120,7 +121,9 @@ general loosening of the check.
 Each question runs through headless Claude Code (`claude --bare -p`),
 connected only to Snowflake's managed MCP server, the same server the
 Claude.ai connector uses, with every built-in tool switched off. Every
-trial starts a fresh session.
+trial starts a fresh session. Four trials run at once by default
+(`--concurrency`). Going much higher risks API rate limits and queries
+queueing on the XS warehouse.
 
 **Run it locally, not in a cloud session.** One-time setup:
 
@@ -147,7 +150,14 @@ uv run python evals/run_evals.py --dry-run                                      
 ```
 
 Spending is capped per trial (`--max-budget-usd`, default 0.50) and per
-run (`--max-total-usd`, default 10).
+run (`--max-total-usd`, default 10). The run cap is checked before each
+trial starts, so trials already running can take it over by up to
+`--concurrency` trials' worth.
+
+**Changed only the grading?** Don't re-run: `regrade.py` re-scores a run's
+saved transcripts with the current grader and answer key in seconds. It
+writes `results_regraded.jsonl` and `regrade.json` next to the originals,
+never over them, and lists every trial whose result changed.
 
 ## Logs
 

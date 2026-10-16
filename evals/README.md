@@ -14,6 +14,7 @@ Run every command from the repo root.
 | Run the hint-free set | `uv run --env-file secrets/.env.eval python evals/run_evals.py --questions evals/questions_hard.yaml` |
 | Run the hint-free set with a context file | `uv run --env-file secrets/.env.eval python evals/run_evals.py --questions evals/questions_hard.yaml --context evals/context.md` |
 | Read a run's results, nicely indented | `uv run python -m json.tool --json-lines evals/runs/<run folder>/results.jsonl` |
+| See why trials failed: answer, reading, checks and the SQL run | `uv run python evals/show_failures.py evals/runs/<run folder>` |
 | Run the tests (no secrets needed) | `uv run pytest evals/tests` |
 
 How a command is built:

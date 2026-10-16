@@ -5,6 +5,7 @@ Usage (from the repo root):
     uv run --env-file secrets/.env.eval python evals/run_evals.py --only L1 --trials 1   # pilot
     uv run --env-file secrets/.env.eval python evals/run_evals.py                       # full run
     uv run python evals/run_evals.py --dry-run                                          # no calls
+    uv run --env-file secrets/.env.eval python evals/run_evals.py --questions evals/questions_hard.yaml --context evals/context.md
 """
 
 import argparse  # reads command-line flags like --only L1 --trials 1
@@ -27,7 +28,9 @@ from evals.grading import (  # noqa: E402
     extract_sql_calls,
     grade_answer,
     is_grounded,
+    matched_reading,
     parse_answer,
+    readings,
     redact,
 )
 
@@ -54,6 +57,18 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument(
         "--trials", type=int, default=3, help="Times to run each question (default 3)"
+    )
+    parser.add_argument(
+        "--questions",
+        type=Path,
+        default=EVALS_DIR / "questions.yaml",
+        help="Answer key to run (default evals/questions.yaml)",
+    )
+    parser.add_argument(
+        "--context",
+        type=Path,
+        help="Extra file added to the agent's instructions, after prompt.md "
+        "(default: none)",
     )
     parser.add_argument("--only", nargs="*", help="Question ids to run, e.g. L1 A3")
     parser.add_argument(
@@ -99,7 +114,18 @@ def command_output(cmd: list[str]) -> str | None:
         return None
 
 
-def claude_command(question: str, args: argparse.Namespace) -> list[str]:
+def system_prompt(context_path: Path | None) -> str:
+    """The instructions added to the agent's system prompt: prompt.md, then
+    the --context file if one was given."""
+    text = (EVALS_DIR / "prompt.md").read_text()
+    if context_path:
+        text += "\n\n" + context_path.read_text()
+    return text
+
+
+def claude_command(
+    question: str, args: argparse.Namespace, prompt_path: Path
+) -> list[str]:
     """The exact headless invocation for one trial. Each flag is there for
     a reason - see the comments, and evals/README.md."""
     return [
@@ -121,7 +147,7 @@ def claude_command(question: str, args: argparse.Namespace) -> list[str]:
         "--permission-prompts",
         "none",
         "--append-system-prompt-file",
-        str(EVALS_DIR / "prompt.md"),
+        str(prompt_path),  # prompt.md, plus the --context file if given
         "--output-format",
         "stream-json",
         "--verbose",  # required by stream-json; gives every event, not just the end
@@ -130,7 +156,9 @@ def claude_command(question: str, args: argparse.Namespace) -> list[str]:
     ]
 
 
-def run_trial(question: dict, trial: int, args, run_dir: Path, base: dict) -> dict:
+def run_trial(
+    question: dict, trial: int, args, run_dir: Path, base: dict, prompt_path: Path
+) -> dict:
     """Run one question once, write its raw transcript, and return the
     graded row for results.jsonl."""
     started = datetime.now(timezone.utc)  # wall-clock start time, for the log
@@ -140,7 +168,7 @@ def run_trial(question: dict, trial: int, args, run_dir: Path, base: dict) -> di
         # Start `claude` and wait for it to finish. capture_output keeps what it
         # prints (the transcript) instead of showing it on screen.
         proc = subprocess.run(
-            claude_command(question["question"], args),
+            claude_command(question["question"], args, prompt_path),
             capture_output=True,
             text=True,
             timeout=args.timeout,
@@ -187,7 +215,10 @@ def run_trial(question: dict, trial: int, args, run_dir: Path, base: dict) -> di
     parsed = parse_answer(final_text)
     sql_calls = extract_sql_calls(events, SQL_TOOL)
     answer_pass = grade_answer(question, parsed)
-    grounded = is_grounded(question, sql_calls)
+    # Which accepted reading the answer matched (None if it matched none).
+    # Grounding then checks that reading's value, not any reading's.
+    reading = matched_reading(question, parsed)
+    grounded = is_grounded(reading or question, sql_calls)
     # Refusals have nothing to ground (grounded is None), so they pass on
     # the answer alone. Everything else needs both checks.
     passed = answer_pass and (grounded is None or grounded)
@@ -204,7 +235,13 @@ def run_trial(question: dict, trial: int, args, run_dir: Path, base: dict) -> di
         "duration_ms": round((time.monotonic() - clock) * 1000),
         "session_id": result.get("session_id") or init.get("session_id"),
         "mcp_servers": init.get("mcp_servers"),
-        "expected": question["expected"],
+        # One value, or a list when the question has several readings
+        "expected": (
+            [r["expected"] for r in readings(question)]
+            if "readings" in question
+            else question["expected"]
+        ),
+        "reading": reading.get("label") if reading else None,
         "final_answer_raw": final_text,
         "parsed_answer": parsed,
         "answer_pass": answer_pass,
@@ -248,6 +285,12 @@ def summarise(rows: list[dict], trials: int) -> dict:
             "grounded": sum(bool(r["grounded"]) for r in qrows),
             "pass_at_k": any(passes),
             "pass_hat_k": all(passes) and len(qrows) == trials,
+            # How often each reading was picked, e.g. {"paid only": 2}
+            "readings": {
+                label: sum(r.get("reading") == label for r in qrows)
+                for label in {r.get("reading") for r in qrows}
+                if label
+            },
         }
 
     # `or 1` avoids dividing by zero if nothing ran.
@@ -274,21 +317,27 @@ def summarise(rows: list[dict], trials: int) -> dict:
 def main() -> int:
     args = parse_args()
     # 1. Load the answer key and pick the questions to run.
-    key_path = EVALS_DIR / "questions.yaml"
-    prompt_path = EVALS_DIR / "prompt.md"
+    key_path = args.questions
     key = yaml.safe_load(key_path.read_text())
     questions = [q for q in key["questions"] if not args.only or q["id"] in args.only]
     if not questions:
         print(f"No questions match --only {args.only}", file=sys.stderr)
         return 2
 
+    if args.context and not args.context.is_file():
+        print(f"--context file not found: {args.context}", file=sys.stderr)
+        return 2
+
     # 2. --dry-run: just print the commands and stop.
     if args.dry_run:
+        # The real prompt file is written into the run folder, which a dry
+        # run doesn't create, so show a placeholder path.
+        placeholder = Path("<run folder>/system_prompt.md")
         for q in questions:
             print(
                 " ".join(
                     repr(part) if " " in part or not part else part
-                    for part in claude_command(q["question"], args)
+                    for part in claude_command(q["question"], args, placeholder)
                 )
             )
         return 0
@@ -321,6 +370,9 @@ def main() -> int:
     run_id = f"{started.strftime('%Y%m%dT%H%M%SZ')}_{git_sha}"
     run_dir = EVALS_DIR / "runs" / run_id
     (run_dir / "raw").mkdir(parents=True)
+    # The exact instructions every trial gets, kept with the run's logs.
+    prompt_path = run_dir / "system_prompt.md"
+    prompt_path.write_text(system_prompt(args.context))
 
     # Columns repeated on every row, so each row stands alone once the
     # logs are loaded somewhere else (e.g. Snowflake) without the manifest.
@@ -329,9 +381,12 @@ def main() -> int:
         "model": args.model,
         "claude_code_version": command_output(["claude", "--version"]),
         "git_sha": git_sha,
+        "answer_key_file": key_path.name,
         "answer_key_sha256": sha256_of(key_path),
         "answer_key_snapshot": key.get("data_snapshot"),
-        "prompt_sha256": sha256_of(prompt_path),
+        "prompt_sha256": sha256_of(EVALS_DIR / "prompt.md"),
+        "context_file": args.context.name if args.context else None,
+        "context_sha256": sha256_of(args.context) if args.context else None,
     }
     manifest = {
         **base,
@@ -357,7 +412,7 @@ def main() -> int:
                 if spent >= args.max_total_usd:
                     stopped_early = f"max_total_usd {args.max_total_usd} reached"
                     break
-                row = run_trial(question, trial, args, run_dir, base)
+                row = run_trial(question, trial, args, run_dir, base, prompt_path)
                 rows.append(row)
                 # Written and flushed per trial, so a crash keeps every
                 # finished row.

@@ -6,6 +6,7 @@ from evals.grading import (
     extract_sql_calls,
     grade_answer,
     is_grounded,
+    matched_reading,
     parse_answer,
     redact,
 )
@@ -25,6 +26,14 @@ NAME_Q = {
     "accept": ["Chelsea", "Chelsea FC", "Chelsea Football Club"],
 }
 REFUSE_Q = {"answer_type": "refuse", "expected": "REFUSE"}
+READINGS_Q = {
+    "answer_type": "number",
+    "tolerance": 0.05,
+    "readings": [
+        {"label": "paid only", "expected": 6.5},
+        {"label": "free included", "expected": 1.3},
+    ],
+}
 
 
 def transcript(sql: str, rows, is_error: bool = False) -> list[dict]:
@@ -113,6 +122,21 @@ def test_missing_answer_fails():
     assert not grade_answer(NUMBER_Q, None)
 
 
+def test_any_reading_passes_and_is_identified():
+    assert grade_answer(READINGS_Q, "6.5")
+    assert grade_answer(READINGS_Q, "1.3")
+    assert not grade_answer(READINGS_Q, "1.0")
+    assert matched_reading(READINGS_Q, "1.3")["label"] == "free included"
+    assert matched_reading(READINGS_Q, "1.0") is None
+
+
+def test_reading_keeps_shared_fields():
+    reading = matched_reading(READINGS_Q, "6.5")
+    assert reading["answer_type"] == "number"
+    assert reading["tolerance"] == 0.05
+    assert "readings" not in reading
+
+
 # extract_sql_calls -----------------------------------------------------
 
 
@@ -188,6 +212,11 @@ def test_errored_calls_do_not_count_as_grounding():
 
 def test_refusal_questions_have_no_grounding():
     assert is_grounded(REFUSE_Q, []) is None
+
+
+def test_question_with_readings_grounds_on_any_reading():
+    calls = extract_sql_calls(transcript("select avg(fee)", [["1.3"]]), TOOL)
+    assert is_grounded(READINGS_Q, calls)
 
 
 # redact ----------------------------------------------------------------

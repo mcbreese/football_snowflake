@@ -67,21 +67,25 @@ def fake_claude(tmp_path, final_text: str, rows):
     return script.parent
 
 
-def run_one(tmp_path, monkeypatch, final_text, rows):
+NUMBER_QUESTION = {
+    "id": "L1",
+    "question": "How many?",
+    "answer_type": "number",
+    "expected": 36,
+    "tolerance": 0,
+}
+
+
+def run_one(tmp_path, monkeypatch, final_text, rows, question=NUMBER_QUESTION):
     bin_dir = fake_claude(tmp_path, final_text, rows)
     monkeypatch.setenv("PATH", f"{bin_dir}:{__import__('os').environ['PATH']}")
     monkeypatch.setenv("SNOWFLAKE_MCP_PAT", SECRET)
     run_dir = tmp_path / "run"
     (run_dir / "raw").mkdir(parents=True)
-    question = {
-        "id": "L1",
-        "question": "How many?",
-        "answer_type": "number",
-        "expected": 36,
-        "tolerance": 0,
-    }
+    prompt_path = run_dir / "system_prompt.md"
+    prompt_path.write_text("instructions")
     args = Namespace(model="m", max_budget_usd=0.5, timeout=30)
-    row = run_evals.run_trial(question, 1, args, run_dir, {"run_id": "r"})
+    row = run_evals.run_trial(question, 1, args, run_dir, {"run_id": "r"}, prompt_path)
     return row, run_dir
 
 
@@ -149,3 +153,80 @@ def test_summary_scores():
     assert summary["pass_at_2"] == 1.0  # both questions passed at least once
     assert summary["pass_hat_2"] == 0.5  # only B passed every trial
     assert summary["total_cost_usd"] == 0.06
+
+
+READINGS_QUESTION = {
+    "id": "H1",
+    "question": "How many goals did Haaland score in 2022/23?",
+    "answer_type": "number",
+    "tolerance": 0,
+    "readings": [
+        {"label": "premier league only", "expected": 36},
+        {"label": "all competitions", "expected": 51},
+    ],
+}
+
+
+def test_row_records_which_reading_matched(tmp_path, monkeypatch):
+    row, _ = run_one(
+        tmp_path, monkeypatch, "ANSWER: 51", [["51"]], question=READINGS_QUESTION
+    )
+    assert row["pass"]
+    assert row["reading"] == "all competitions"
+    assert row["expected"] == [36, 51]
+
+
+def test_grounding_must_match_the_chosen_reading(tmp_path, monkeypatch):
+    # Answered 51 but only 36 came back from Snowflake: not grounded.
+    row, _ = run_one(
+        tmp_path, monkeypatch, "ANSWER: 51", [["36"]], question=READINGS_QUESTION
+    )
+    assert row["answer_pass"] and not row["grounded"] and not row["pass"]
+
+
+def test_system_prompt_appends_context(tmp_path):
+    context = tmp_path / "context.md"
+    context.write_text("House rule: seasons start in July.")
+    text = run_evals.system_prompt(context)
+    assert text.startswith((run_evals.EVALS_DIR / "prompt.md").read_text())
+    assert text.endswith("House rule: seasons start in July.")
+    assert (
+        run_evals.system_prompt(None) == (run_evals.EVALS_DIR / "prompt.md").read_text()
+    )
+
+
+def test_summary_counts_readings():
+    rows = [
+        {
+            "question_id": "H1",
+            "pass": True,
+            "answer_pass": True,
+            "grounded": True,
+            "total_cost_usd": 0.01,
+            "error": None,
+            "reading": "all competitions",
+        },
+        {
+            "question_id": "H1",
+            "pass": True,
+            "answer_pass": True,
+            "grounded": True,
+            "total_cost_usd": 0.01,
+            "error": None,
+            "reading": "premier league only",
+        },
+        {
+            "question_id": "H1",
+            "pass": False,
+            "answer_pass": False,
+            "grounded": False,
+            "total_cost_usd": 0.01,
+            "error": None,
+            "reading": None,
+        },
+    ]
+    per_question = run_evals.summarise(rows, trials=3)["per_question"]["H1"]
+    assert per_question["readings"] == {
+        "all competitions": 1,
+        "premier league only": 1,
+    }

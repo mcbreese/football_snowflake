@@ -11,6 +11,8 @@ Run every command from the repo root.
 | Pilot: one question, once | `uv run --env-file secrets/.env.eval python evals/run_evals.py --only L1 --trials 1` |
 | Run a few questions | `uv run --env-file secrets/.env.eval python evals/run_evals.py --only L1 A3 R1` |
 | Full baseline: every question, 3 times | `uv run --env-file secrets/.env.eval python evals/run_evals.py` |
+| Run the hint-free set | `uv run --env-file secrets/.env.eval python evals/run_evals.py --questions evals/questions_hard.yaml` |
+| Run the hint-free set with a context file | `uv run --env-file secrets/.env.eval python evals/run_evals.py --questions evals/questions_hard.yaml --context evals/context.md` |
 | Read a run's results, nicely indented | `uv run python -m json.tool --json-lines evals/runs/<run folder>/results.jsonl` |
 | Run the tests (no secrets needed) | `uv run pytest evals/tests` |
 
@@ -46,7 +48,17 @@ flowchart TB
   LG --> S["Summary: pass@1, pass@3, pass^3, cost"]
 ```
 
-## `questions.yaml`
+## Answer keys
+
+- **`questions.yaml`** is the regression suite. Each question carries its own
+  hints ("fee greater than zero, 1 July to 30 June"), so it mostly tests
+  whether the agent follows precise instructions. It scored 100% on 15 Oct
+  2026 and should stay there.
+- **`questions_hard.yaml`** asks the same verified facts the way a user
+  would, without the hints. Run once without and once with `--context`;
+  the score difference measures what the context file is worth.
+
+The rest of this section applies to both files.
 
 Each entry has the question, an `expected` answer, the `sql` that produced
 it, and a `cross_check_sql` written a different way that must agree. Every
@@ -69,6 +81,14 @@ The agent's reply must end with `ANSWER: <value>` (or `ANSWER: REFUSE`).
 | `number` | the absolute difference from `expected` is within `tolerance` |
 | `name` | it matches any value in `accept`, case-insensitive |
 | `refuse` | the answer is exactly `REFUSE` |
+
+**Several defensible readings.** A hint-free question can have more than
+one fair answer ("average fee": paid transfers only, or free transfers
+too?). Such a question lists each one under `readings`, with its own
+`label`, `expected` value and verified SQL, and any of them passes.
+`results.jsonl` records which reading the agent chose in `reading`, and the
+grounding check uses that reading's value. Refusing a question that has
+readings fails.
 
 **Grounding check.** For every answerable question, the expected value
 (or an alternative listed under `grounding`) must also appear in the rows

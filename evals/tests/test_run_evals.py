@@ -61,8 +61,9 @@ def fake_claude(tmp_path, final_text: str, rows):
     ]
     script = tmp_path / "bin" / "claude"
     script.parent.mkdir()
-    lines = "\n".join(json.dumps(e) for e in events)
-    script.write_text(f"#!/bin/sh\ncat <<'EOF'\n{lines}\nEOF\n")
+    # ensure_ascii=False: real Claude Code sends accents as raw UTF-8
+    lines = "\n".join(json.dumps(e, ensure_ascii=False) for e in events)
+    script.write_text(f"#!/bin/sh\ncat <<'EOF'\n{lines}\nEOF\n", encoding="utf-8")
     script.chmod(script.stat().st_mode | stat.S_IEXEC)
     return script.parent
 
@@ -230,3 +231,24 @@ def test_summary_counts_readings():
         "all competitions": 1,
         "premier league only": 1,
     }
+
+
+def test_accented_answer_survives_the_pipeline(tmp_path, monkeypatch):
+    question = {
+        "id": "HJ3",
+        "question": "Which club?",
+        "answer_type": "name",
+        "expected": "Galatasaray Spor Kulübü",
+        "accept": ["Galatasaray Spor Kulübü"],
+    }
+    row, run_dir = run_one(
+        tmp_path,
+        monkeypatch,
+        "ANSWER: Galatasaray Spor Kulübü",
+        [["Galatasaray Spor Kulübü", "41"]],
+        question=question,
+    )
+    assert row["parsed_answer"] == "Galatasaray Spor Kulübü"
+    assert row["pass"]
+    raw = (run_dir / "raw" / "HJ3_t1.jsonl").read_text(encoding="utf-8")
+    assert "Kulübü" in raw

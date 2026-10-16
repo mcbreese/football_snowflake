@@ -286,16 +286,14 @@ questions:
     readings:
       - label: share of all transfers
         expected: 61.8
-        grounding:
-          - all_of: [5270, 8523]
+        grounding: [5270, 5263]
         sql: |
           select round(100 * count_if(transfer_fee = 0) / count(*), 1)
           from prd_analytics.football_gold.fct_player_transfers
           where transfer_date between '2023-07-01' and '2024-06-30'
       - label: share of transfers with a known fee
         expected: 80.1
-        grounding:
-          - all_of: [5270, 6576]
+        grounding: [5270, 5263]
         sql: |
           select round(100 * count_if(transfer_fee = 0) / count(transfer_fee), 1)
           from prd_analytics.football_gold.fct_player_transfers
@@ -304,8 +302,10 @@ questions:
       Tests null handling. 8,523 transfers: 5,270 with a fee of 0, 1,947
       with no fee recorded, 1,306 paid. Counting unknown fees as free gives
       84.7, which fails. transfer_season = '23/24' gives 61.8 and 80.1 too.
-      Grounding needs both the free count and the denominator, because the
-      percentage itself is often computed by the agent.
+      Grounding is the free-transfer count, by date window (5,270) or by
+      transfer_season (5,263): the agent usually computes the percentage
+      itself, and the denominator can legitimately be derived several ways
+      (6,569 was never returned in one 16 Oct trial; it added 5,263 + 1,306).
 
   - id: HA6
     category: aggregation

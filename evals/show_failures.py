@@ -32,7 +32,7 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    with (args.run_dir / "results.jsonl").open() as results:
+    with (args.run_dir / "results.jsonl").open(encoding="utf-8") as results:
         rows = [json.loads(line) for line in results if line.strip()]
 
     shown = [r for r in rows if args.all or not r["pass"]]

@@ -125,9 +125,9 @@ def command_output(cmd: list[str]) -> str | None:
 def system_prompt(context_path: Path | None) -> str:
     """The instructions added to the agent's system prompt: prompt.md, then
     the --context file if one was given."""
-    text = (EVALS_DIR / "prompt.md").read_text()
+    text = (EVALS_DIR / "prompt.md").read_text(encoding="utf-8")
     if context_path:
-        text += "\n\n" + context_path.read_text()
+        text += "\n\n" + context_path.read_text(encoding="utf-8")
     return text
 
 
@@ -178,14 +178,19 @@ def run_trial(
         proc = subprocess.run(
             claude_command(question["question"], args, prompt_path),
             capture_output=True,
-            text=True,
+            # Claude Code writes UTF-8. Without this, Windows decodes it with
+            # its own default encoding and names like João arrive mangled.
+            encoding="utf-8",
+            errors="replace",
             timeout=args.timeout,
             cwd=EVALS_DIR,  # run from evals/, not the repo root
         )
         stdout, stderr, exit_code = proc.stdout, proc.stderr, proc.returncode
     except subprocess.TimeoutExpired as exc:  # ran longer than --timeout
         stdout = (
-            exc.stdout.decode() if isinstance(exc.stdout, bytes) else (exc.stdout or "")
+            exc.stdout.decode("utf-8", errors="replace")
+            if isinstance(exc.stdout, bytes)
+            else (exc.stdout or "")
         )
         stderr, exit_code, error = "", None, f"timeout after {args.timeout}s"
 
@@ -196,9 +201,9 @@ def run_trial(
 
     # Raw layer: every event, untouched apart from redaction.
     raw_path = run_dir / "raw" / f"{question['id']}_t{trial}.jsonl"
-    raw_path.write_text(stdout)
+    raw_path.write_text(stdout, encoding="utf-8")
     if stderr.strip():
-        raw_path.with_suffix(".stderr.txt").write_text(stderr)
+        raw_path.with_suffix(".stderr.txt").write_text(stderr, encoding="utf-8")
 
     events = parse_events(stdout)
 
@@ -351,7 +356,7 @@ def run_jobs(jobs, run_one, results_path: Path, concurrency: int, max_total_usd)
     running = {}  # future -> job, for the trials in flight
     with (
         ThreadPoolExecutor(max_workers=concurrency) as pool,
-        results_path.open("a") as results_file,
+        results_path.open("a", encoding="utf-8") as results_file,
     ):
         while pending or running:
             # Start trials until `concurrency` are in flight. The spend cap is
@@ -391,7 +396,7 @@ def main() -> int:
     args = parse_args()
     # 1. Load the answer key and pick the questions to run.
     key_path = args.questions
-    key = yaml.safe_load(key_path.read_text())
+    key = yaml.safe_load(key_path.read_text(encoding="utf-8"))
     questions = [q for q in key["questions"] if not args.only or q["id"] in args.only]
     if not questions:
         print(f"No questions match --only {args.only}", file=sys.stderr)
@@ -448,7 +453,7 @@ def main() -> int:
     (run_dir / "raw").mkdir(parents=True)
     # The exact instructions every trial gets, kept with the run's logs.
     prompt_path = run_dir / "system_prompt.md"
-    prompt_path.write_text(system_prompt(args.context))
+    prompt_path.write_text(system_prompt(args.context), encoding="utf-8")
 
     # Columns repeated on every row, so each row stands alone once the
     # logs are loaded somewhere else (e.g. Snowflake) without the manifest.
@@ -476,7 +481,7 @@ def main() -> int:
     }
     manifest_path = run_dir / "manifest.json"
     manifest_path.write_text(
-        json.dumps(manifest, indent=2)
+        json.dumps(manifest, indent=2), encoding="utf-8"
     )  # written now, completed at the end
 
     # 5. The main loop: every question x every trial.
@@ -497,7 +502,7 @@ def main() -> int:
             "summary": summarise(rows, args.trials),
         }
     )
-    manifest_path.write_text(json.dumps(manifest, indent=2))
+    manifest_path.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
     summary = manifest["summary"]
     print(
         f"\nRun {run_id}: pass@1 {summary['pass_at_1']:.0%} "

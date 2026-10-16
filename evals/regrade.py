@@ -30,10 +30,10 @@ from evals.run_evals import (  # noqa: E402
 
 def regrade(run_dir: Path, key_path: Path) -> tuple[list[dict], list[str]]:
     """Return (regraded rows, messages about rows that couldn't be)."""
-    key = yaml.safe_load(key_path.read_text())
+    key = yaml.safe_load(key_path.read_text(encoding="utf-8"))
     questions = {q["id"]: q for q in key["questions"]}  # id -> question
     rows, notes = [], []
-    with (run_dir / "results.jsonl").open() as results:
+    with (run_dir / "results.jsonl").open(encoding="utf-8") as results:
         for line in results:
             if not line.strip():
                 continue
@@ -49,7 +49,12 @@ def regrade(run_dir: Path, key_path: Path) -> tuple[list[dict], list[str]]:
                 notes.append(f"{label}: transcript {row['raw_file']} not found")
                 continue
             # The original row, with every grading column replaced.
-            new = {**row, **grade_events(question, parse_events(raw_path.read_text()))}
+            new = {
+                **row,
+                **grade_events(
+                    question, parse_events(raw_path.read_text(encoding="utf-8"))
+                ),
+            }
             if new["pass"] != row.get("pass"):
                 change = "fail -> PASS" if new["pass"] else "PASS -> fail"
                 notes.append(f"{label}: {change}")
@@ -69,7 +74,7 @@ def main() -> int:
     )
     args = parser.parse_args()
 
-    manifest = json.loads((args.run_dir / "manifest.json").read_text())
+    manifest = json.loads((args.run_dir / "manifest.json").read_text(encoding="utf-8"))
     # Older runs don't record the file name; they all used questions.yaml.
     key_path = args.questions or EVALS_DIR / manifest.get(
         "answer_key_file", "questions.yaml"
@@ -83,7 +88,9 @@ def main() -> int:
 
     # Written next to the originals, never over them.
     out_path = args.run_dir / "results_regraded.jsonl"
-    out_path.write_text("".join(json.dumps(row) + "\n" for row in rows))
+    out_path.write_text(
+        "".join(json.dumps(row) + "\n" for row in rows), encoding="utf-8"
+    )
     trials = manifest["trials_per_question"]
     summary = summarise(rows, trials)
     (args.run_dir / "regrade.json").write_text(
@@ -97,7 +104,8 @@ def main() -> int:
                 "summary": summary,
             },
             indent=2,
-        )
+        ),
+        encoding="utf-8",
     )
     old = manifest.get("summary") or {}
     print(

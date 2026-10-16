@@ -50,17 +50,24 @@ questions:
     category: lookup
     question: What's Saka's stronger foot?
     answer_type: name
-    expected: left
-    accept: [left, left foot, left-footed]
+    # A name clash: either player's answer is correct, and so is refusing.
+    accept_refuse: true
+    readings:
+      - label: Bukayo Saka
+        expected: left
+        accept: [left, left foot, left-footed]
+      - label: Mathis Saka
+        expected: right
+        accept: [right, right foot, right-footed]
     sql: |
       select player_name, player_id, foot
       from prd_analytics.football_gold.dim_players
       where regexp_like(player_name, '.*\\bSaka\\b.*', 'i')
     notes: >-
       Surname only. Two players match: Bukayo Saka (left) and Mathis Saka
-      (right). "Saka" in ordinary use means Bukayo, so right is not
-      accepted. An agent that notices both and refuses fails here; review
-      whether that should count as a pass.
+      (right). Choosing "the famous one" needs knowledge from outside the
+      data, which the prompt forbids, so either player's foot passes, and
+      so does a refusal. "Both" or a mixed answer fails.
 
   - id: HA1
     category: aggregation
@@ -246,8 +253,10 @@ questions:
     question: How many goals did João Pedro score in 2023/24?
     answer_type: number
     tolerance: 0
+    # A name clash: any one player's total is correct, and so is refusing.
+    accept_refuse: true
     readings:
-      - label: all competitions
+      - label: player 626724, all competitions
         expected: 20
         grounding:
           - all_of: [9, 6, 5]
@@ -256,27 +265,31 @@ questions:
           from prd_analytics.football_gold.fct_player_performance_per_season_competition
           where player_id = 626724
             and season = 2023
-      - label: premier league only
+      - label: player 626724, league only
         expected: 9
-        sql: |
-          select total_goals
-          from prd_analytics.football_gold.fct_player_performance_per_season_competition
-          where player_id = 626724
-            and season = 2023
-            and competition_name = 'premier-league'
+      - label: player 298410, all competitions
+        expected: 5
+        grounding:
+          - all_of: [4, 1]
+      - label: player 298410, league only
+        expected: 4
+      - label: player 235568
+        expected: 0
     cross_check_sql: |
-      select p.player_id, sum(f.total_goals), listagg(distinct f.competition_name, ',')
+      select f.player_id, f.competition_name, f.total_goals
       from prd_analytics.football_gold.fct_player_performance_per_season_competition as f
       inner join prd_analytics.football_gold.dim_players as p
           on f.player_id = p.player_id
       where p.player_name = 'João Pedro'
         and f.season = 2023
-      group by p.player_id
+      order by f.player_id, f.competition_name
     notes: >-
-      Trap: three different players are called João Pedro. The one people
-      mean (Premier League, Europa League, FA Cup) scored 20 (9 + 6 + 5).
-      The others scored 5 (Greece) and 0 (Portugal). Filtering on the name
-      alone and summing gives 25, which fails, as do 5 and 0.
+      Trap: three different players are called João Pedro. 626724 (Premier
+      League 9, Europa League 6, FA Cup 5), 298410 (Greek Super League 4,
+      Greek Cup 1) and 235568 (0, Portugal). Any one player's total passes,
+      as does a refusal: picking "the famous one" needs outside knowledge.
+      Filtering on the name alone and summing gives 25, which fails. The
+      0 reading's grounding is weak (0 is a common value).
 
   - id: HA5
     category: aggregation

@@ -90,7 +90,13 @@ too?). Such a question lists each one under `readings`, with its own
 `label`, `expected` value and verified SQL, and any of them passes.
 `results.jsonl` records which reading the agent chose in `reading`, and the
 grounding check uses that reading's value. Refusing a question that has
-readings fails.
+readings fails, unless it's marked `accept_refuse: true`.
+
+**Name clashes.** When a name belongs to several players ("Saka", "João
+Pedro"), every player's answer is a reading, and `accept_refuse: true`
+also passes a refusal: picking "the famous one" would need knowledge from
+outside the data, which the prompt forbids. What fails is mixing players
+up, such as adding all three João Pedros' goals together.
 
 **Grounding check.** For every answerable question, the expected value
 (or an alternative listed under `grounding`) must also appear in the rows

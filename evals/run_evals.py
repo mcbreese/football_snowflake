@@ -28,6 +28,7 @@ sys.path.insert(0, str(REPO_ROOT))
 from evals.grading import (  # noqa: E402
     extract_sql_calls,
     grade_answer,
+    accepted_refusal,
     is_grounded,
     matched_reading,
     parse_answer,
@@ -267,7 +268,9 @@ def grade_events(question: dict, events: list[dict]) -> dict:
     # Which accepted reading the answer matched (None if it matched none).
     # Grounding then checks that reading's value, not any reading's.
     reading = matched_reading(question, parsed)
-    grounded = is_grounded(reading or question, sql_calls)
+    # An allowed refusal has no value to ground, like a refusal question.
+    refused = accepted_refusal(question, parsed)
+    grounded = None if refused else is_grounded(reading or question, sql_calls)
     # Refusals have nothing to ground (grounded is None), so they pass on
     # the answer alone. Everything else needs both checks.
     passed = answer_pass and (grounded is None or grounded)
@@ -278,7 +281,11 @@ def grade_events(question: dict, events: list[dict]) -> dict:
             if "readings" in question
             else question["expected"]
         ),
-        "reading": reading.get("label") if reading else None,
+        "reading": (
+            "refused (allowed)"
+            if refused
+            else reading.get("label") if reading else None
+        ),
         "final_answer_raw": final_text,
         "parsed_answer": parsed,
         "answer_pass": answer_pass,

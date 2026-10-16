@@ -252,3 +252,13 @@ def test_accented_answer_survives_the_pipeline(tmp_path, monkeypatch):
     assert row["pass"]
     raw = (run_dir / "raw" / "HJ3_t1.jsonl").read_text(encoding="utf-8")
     assert "Kulübü" in raw
+
+
+def test_allowed_refusal_passes_without_grounding(tmp_path, monkeypatch):
+    question = {**READINGS_QUESTION, "accept_refuse": True}
+    row, _ = run_one(
+        tmp_path, monkeypatch, "ANSWER: REFUSE", [["1"]], question=question
+    )
+    assert row["pass"] and row["answer_pass"]
+    assert row["grounded"] is None
+    assert row["reading"] == "refused (allowed)"

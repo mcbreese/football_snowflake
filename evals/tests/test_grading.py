@@ -137,6 +137,27 @@ def test_reading_keeps_shared_fields():
     assert "readings" not in reading
 
 
+CLASH_Q = {
+    "answer_type": "name",
+    "accept_refuse": True,
+    "readings": [
+        {"label": "Bukayo Saka", "expected": "left", "accept": ["left"]},
+        {"label": "Mathis Saka", "expected": "right", "accept": ["right"]},
+    ],
+}
+
+
+def test_name_clash_accepts_every_player_and_a_refusal():
+    assert grade_answer(CLASH_Q, "left")
+    assert grade_answer(CLASH_Q, "right")
+    assert grade_answer(CLASH_Q, "REFUSE")
+    assert not grade_answer(CLASH_Q, "both")
+
+
+def test_refusal_still_fails_without_accept_refuse():
+    assert not grade_answer({**CLASH_Q, "accept_refuse": False}, "REFUSE")
+
+
 # extract_sql_calls -----------------------------------------------------
 
 

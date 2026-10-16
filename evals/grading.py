@@ -68,9 +68,22 @@ def matched_reading(question: dict, parsed: str | None) -> dict | None:
     return None
 
 
+def accepted_refusal(question: dict, parsed: str | None) -> bool:
+    """Is this a refusal the question allows? `accept_refuse: true` marks
+    questions where refusing is as fair as answering, such as a name shared
+    by several players, where picking one would need outside knowledge."""
+    return (
+        bool(question.get("accept_refuse"))
+        and parsed is not None
+        and parsed.upper() == REFUSE
+    )
+
+
 def grade_answer(question: dict, parsed: str | None) -> bool:
-    """The answer check: does the answer match any accepted reading?
-    `question` is one entry from a questions file."""
+    """The answer check: does the answer match any accepted reading (or is
+    it an allowed refusal)? `question` is one entry from a questions file."""
+    if accepted_refusal(question, parsed):
+        return True
     return matched_reading(question, parsed) is not None
 
 

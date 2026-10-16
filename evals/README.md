@@ -99,6 +99,13 @@ can be "known" without querying. A trial passes only when both checks
 pass. Both are logged separately, so a gap between the answer-only score
 and the grounded score shows how often the agent is guessing.
 
+When the agent works out the answer itself from what it read (adding up
+goals per competition, say), the answer never appears in the rows. For
+those questions, `grounding` lists the parts as `all_of: [36, 12, 3]`, and
+the trial counts as grounded only if **every** part came back from a query.
+It's written per question so that each one is a reviewed decision, not a
+general loosening of the check.
+
 **Scores.**
 
 - **pass@1** is the share of all trials that passed.

@@ -32,6 +32,10 @@ questions:
             and season = 2022
       - label: all competitions
         expected: 51
+        # The agent tends to add up the per-competition rows itself, so 51
+        # never comes back from Snowflake; its parts must instead.
+        grounding:
+          - all_of: [36, 12, 3]
         sql: |
           select sum(total_goals)
           from prd_analytics.football_gold.fct_player_performance_per_season_competition
@@ -232,3 +236,162 @@ questions:
       (issue #76) and nothing in the gold layer can split them, so the
       true answer is unknowable. LaLiga is also wrong: either league alone
       could still top 52.
+
+  # Harder questions, added after the first hint-free run (16 Oct) showed
+  # the set above was close to saturated. Each one targets a real pitfall in
+  # this data.
+
+  - id: HL3
+    category: lookup
+    question: How many goals did João Pedro score in 2023/24?
+    answer_type: number
+    tolerance: 0
+    readings:
+      - label: all competitions
+        expected: 20
+        grounding:
+          - all_of: [9, 6, 5]
+        sql: |
+          select sum(total_goals)
+          from prd_analytics.football_gold.fct_player_performance_per_season_competition
+          where player_id = 626724
+            and season = 2023
+      - label: premier league only
+        expected: 9
+        sql: |
+          select total_goals
+          from prd_analytics.football_gold.fct_player_performance_per_season_competition
+          where player_id = 626724
+            and season = 2023
+            and competition_name = 'premier-league'
+    cross_check_sql: |
+      select p.player_id, sum(f.total_goals), listagg(distinct f.competition_name, ',')
+      from prd_analytics.football_gold.fct_player_performance_per_season_competition as f
+      inner join prd_analytics.football_gold.dim_players as p
+          on f.player_id = p.player_id
+      where p.player_name = 'João Pedro'
+        and f.season = 2023
+      group by p.player_id
+    notes: >-
+      Trap: three different players are called João Pedro. The one people
+      mean (Premier League, Europa League, FA Cup) scored 20 (9 + 6 + 5).
+      The others scored 5 (Greece) and 0 (Portugal). Filtering on the name
+      alone and summing gives 25, which fails, as do 5 and 0.
+
+  - id: HA5
+    category: aggregation
+    question: What percentage of transfers in 2023/24 were free?
+    answer_type: number
+    tolerance: 0.1
+    readings:
+      - label: share of all transfers
+        expected: 61.8
+        grounding:
+          - all_of: [5270, 8523]
+        sql: |
+          select round(100 * count_if(transfer_fee = 0) / count(*), 1)
+          from prd_analytics.football_gold.fct_player_transfers
+          where transfer_date between '2023-07-01' and '2024-06-30'
+      - label: share of transfers with a known fee
+        expected: 80.1
+        grounding:
+          - all_of: [5270, 6576]
+        sql: |
+          select round(100 * count_if(transfer_fee = 0) / count(transfer_fee), 1)
+          from prd_analytics.football_gold.fct_player_transfers
+          where transfer_date between '2023-07-01' and '2024-06-30'
+    notes: >-
+      Tests null handling. 8,523 transfers: 5,270 with a fee of 0, 1,947
+      with no fee recorded, 1,306 paid. Counting unknown fees as free gives
+      84.7, which fails. transfer_season = '23/24' gives 61.8 and 80.1 too.
+      Grounding needs both the free count and the denominator, because the
+      percentage itself is often computed by the agent.
+
+  - id: HA6
+    category: aggregation
+    question: What was the most expensive transfer of 2023/24?
+    answer_type: name
+    expected: Declan Rice
+    accept: [Declan Rice, Rice]
+    sql: |
+      select p.player_name, t.transfer_fee
+      from prd_analytics.football_gold.fct_player_transfers as t
+      inner join prd_analytics.football_gold.dim_players as p
+          on t.player_id = p.player_id
+      where t.transfer_date between '2023-07-01' and '2024-06-30'
+      order by t.transfer_fee desc nulls last
+      limit 1
+    notes: >-
+      EUR 116.6m (West Ham to Arsenal), just ahead of Moisés Caicedo on
+      116.0m. Trap: ranking by market_value_in_eur gives Jude Bellingham
+      (120m value, 113m fee). Same answer by transfer_season.
+
+  - id: HA7
+    category: aggregation
+    question: Who was the most valuable player to change clubs in 2023/24?
+    answer_type: name
+    expected: Jude Bellingham
+    accept: [Jude Bellingham, Bellingham]
+    sql: |
+      select p.player_name, t.market_value_in_eur, t.transfer_fee
+      from prd_analytics.football_gold.fct_player_transfers as t
+      inner join prd_analytics.football_gold.dim_players as p
+          on t.player_id = p.player_id
+      where t.transfer_date between '2023-07-01' and '2024-06-30'
+      order by t.market_value_in_eur desc nulls last
+      limit 1
+    notes: >-
+      The pair to HA6: "valuable" means market value (EUR 120m), not fee.
+      Ranking by fee gives Declan Rice, which fails. Review: is the fee
+      reading defensible enough to accept?
+
+  - id: HJ3
+    category: join
+    question: Which club signed the most players in 2023/24?
+    answer_type: name
+    expected: Galatasaray Spor Kulübü
+    accept: [Galatasaray, Galatasaray SK, Galatasaray Spor Kulübü]
+    sql: |
+      select c.name, count(*) as signings
+      from prd_analytics.football_gold.fct_player_transfers as t
+      inner join prd_analytics.football_gold.dim_clubs as c
+          on t.to_club_id = c.club_id
+      where t.transfer_date between '2023-07-01' and '2024-06-30'
+      group by c.name
+      order by signings desc
+      limit 1
+    cross_check_sql: |
+      select to_club_id, count(*) as signings
+      from prd_analytics.football_gold.fct_player_transfers
+      where transfer_date between '2023-07-01' and '2024-06-30'
+      group by to_club_id
+      order by signings desc
+      limit 2
+    notes: >-
+      41 signings. Trap: club_id 515 tops the raw count (164) but isn't in
+      dim_clubs, never has a fee, never appears in match data, and is also
+      a common from_club. It's very likely Transfermarkt's "without club"
+      (inferred from the data, not confirmed). Answering 515 or "an unknown
+      club" fails.
+
+  - id: HJ4
+    category: join
+    question: Which club did Declan Rice play for in 2021/22?
+    answer_type: name
+    expected: West Ham United Football Club
+    accept: [West Ham, West Ham United, West Ham United FC, West Ham United Football Club]
+    sql: |
+      select t.transfer_date, f.name as from_club, c.name as to_club
+      from prd_analytics.football_gold.fct_player_transfers as t
+      left join prd_analytics.football_gold.dim_clubs as f
+          on t.from_club_id = f.club_id
+      left join prd_analytics.football_gold.dim_clubs as c
+          on t.to_club_id = c.club_id
+      where t.player_id = 357662
+      order by t.transfer_date
+    notes: >-
+      Trap: a real defect. fct_player_performance_per_season_competition
+      gives club_id = Arsenal for every Rice season, because club_id is the
+      player's current club, not the club at the time. The transfer history
+      shows West Ham from July 2017 until the move to Arsenal on
+      2023-07-15. Arsenal fails.

@@ -219,6 +219,32 @@ def test_question_with_readings_grounds_on_any_reading():
     assert is_grounded(READINGS_Q, calls)
 
 
+SUMMED_Q = {
+    "answer_type": "number",
+    "expected": 51,
+    "tolerance": 0,
+    "grounding": [{"all_of": [36, 12, 3]}],
+}
+
+
+def test_summed_answer_grounded_when_every_part_returned():
+    rows = [["premier-league", "36"], ["uefa-champions-league", "12"], ["fa-cup", "3"]]
+    calls = extract_sql_calls(transcript("select ...", rows), TOOL)
+    assert is_grounded(SUMMED_Q, calls)
+
+
+def test_summed_answer_not_grounded_when_a_part_is_missing():
+    rows = [["premier-league", "36"], ["uefa-champions-league", "12"]]
+    calls = extract_sql_calls(transcript("select ...", rows), TOOL)
+    assert not is_grounded(SUMMED_Q, calls)
+
+
+def test_summed_parts_from_metadata_do_not_count():
+    sql = "select * from information_schema.columns"
+    calls = extract_sql_calls(transcript(sql, [["36", "12", "3"]]), TOOL)
+    assert not is_grounded(SUMMED_Q, calls)
+
+
 # redact ----------------------------------------------------------------
 
 

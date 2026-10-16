@@ -183,6 +183,10 @@ def grounding_targets(question: dict) -> list[dict]:
     the final answer (A3: the agent may query the raw EUR average and
     convert it to millions itself).
 
+    A `grounding` entry written as `{all_of: [36, 12, 3]}` is for an answer
+    the agent adds up itself (51 = 36 + 12 + 3): it counts only if every
+    one of those values was returned.
+
     For a question with several readings, this covers every reading. Pass
     a single reading instead to ground only that one.
     """
@@ -191,7 +195,14 @@ def grounding_targets(question: dict) -> list[dict]:
         tolerance = float(reading.get("tolerance", 0))
         targets.append({"value": reading["expected"], "tolerance": tolerance})
         for extra in reading.get("grounding") or []:  # [] if there are none
-            if isinstance(extra, dict):  # written as {value: ..., tolerance: ...}
+            if isinstance(extra, dict) and "all_of" in extra:  # {all_of: [...]}
+                targets.append(
+                    {
+                        "all_of": extra["all_of"],
+                        "tolerance": float(extra.get("tolerance", tolerance)),
+                    }
+                )
+            elif isinstance(extra, dict):  # written as {value: ..., tolerance: ...}
                 targets.append(
                     {
                         "value": extra["value"],
@@ -208,16 +219,36 @@ def is_grounded(question: dict, sql_calls: list[dict]) -> bool | None:
     is nothing to ground, so they can be told apart from a real failure."""
     if question["answer_type"] == "refuse":
         return None
+    evidence = [call for call in sql_calls if _is_evidence(call)]
+    answer_type = question["answer_type"]
     for target in grounding_targets(question):  # each acceptable value
-        for call in sql_calls:  # each query the agent ran
-            if call.get("is_error"):  # failed queries don't count as evidence
-                continue
-            sql = (call.get("sql") or "").lower().strip()
-            if sql.startswith(("show", "desc")) or "information_schema" in sql:
-                continue  # metadata queries don't count as evidence
-            if _value_in_result(target, question["answer_type"], call.get("rows")):
-                return True  # found it: stop looking
+        if "all_of" in target:
+            # Every part must appear somewhere in what came back.
+            parts = [
+                {"value": v, "tolerance": target["tolerance"]} for v in target["all_of"]
+            ]
+            if all(
+                any(
+                    _value_in_result(part, answer_type, c.get("rows")) for c in evidence
+                )
+                for part in parts
+            ):
+                return True
+        elif any(
+            _value_in_result(target, answer_type, c.get("rows")) for c in evidence
+        ):
+            return True  # found it: stop looking
     return False  # checked everything, value never appeared in any result
+
+
+def _is_evidence(call: dict) -> bool:
+    """Can this query's rows count as evidence for an answer?"""
+    if call.get("is_error"):  # failed queries don't count as evidence
+        return False
+    sql = (call.get("sql") or "").lower().strip()
+    if sql.startswith(("show", "desc")) or "information_schema" in sql:
+        return False  # metadata queries don't count as evidence
+    return True
 
 
 def _value_in_result(target: dict, answer_type: str, rows) -> bool:

@@ -138,7 +138,7 @@ The player's height measured in centimeters.
 {% enddocs %}
 
 {% docs date_of_birth %}
-The player's date of birth, standardised as a DATE type.
+The player's date of birth, standardised as a DATE type. **Personal data** (tagged `personal_data`): kept out of the Gold layer on purpose. Gold exposes ages derived from it instead, which is all analysis needs (data minimisation).
 {% enddocs %}
 
 {% docs age_in_years %}

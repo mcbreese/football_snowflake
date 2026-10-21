@@ -257,8 +257,11 @@ When reviewing or writing code, check for:
   introduce a pattern (e.g. snowflaking a dimension) without a stated
   reason?
 - Security/governance: no hardcoded credentials, no PII handling without
-  flagging it explicitly, even though this dataset doesn't currently
-  contain any.
+  flagging it explicitly. The data is public, but player names and dates
+  of birth are still personal data under UK GDPR. Those columns carry
+  `meta.personal_data: true` and the `personal_data` tag. Keep
+  `date_of_birth` out of gold (expose derived ages instead) and tag any
+  new personal-data column the same way.
 
 ## Comment verbosity
 

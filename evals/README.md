@@ -165,13 +165,44 @@ saved transcripts with the current grader and answer key in seconds. It
 writes `results_regraded.jsonl` and `regrade.json` next to the originals,
 never over them, and lists every trial whose result changed.
 
+## Results
+
+Headline numbers only; per-question analysis lives in the project's notes,
+and run folders stay local (see Logs). Every score is regraded under the
+current grading rules (`regrade.py`), so the rows are comparable.
+
+| Date | Questions | Context file | pass@1 | pass^3 | LLM cost |
+|---|---|---|---|---|---|
+| 15 Oct 2026 | `questions.yaml` (11, with hints) | none | 33/33 (100%) | 100% | $0.36 |
+| 16 Oct 2026 | `questions_hard.yaml` (18, hint-free) | none | 51/54 (94%) | 89% | $0.78 |
+| 21 Oct 2026 | `questions_hard.yaml` (18, hint-free) | `context.md` | 54/54 (100%) | 100% | $0.73 |
+
+What the runs showed:
+
+- **The hinted set saturated.** 100% measured instruction-following, not
+  skill, which is why the hint-free set exists.
+- **Without context, the agent noticed problems and answered anyway.**
+  Each real failure on 16 Oct (Declan Rice's 2021/22 club, the league
+  with most red cards) contained the agent's own warning that the data
+  might be wrong, followed by an answer.
+- **With context, both failures went to 3/3 and nothing got worse.** The
+  context also steered which reading the agent chose on ambiguous
+  questions (all three average-fee answers used its null-fee definition).
+- **The evals found a real data bug:** see Known data defects.
+- **Limits.** One run of 3 trials per question; the same author wrote the
+  questions and the context file; and the context run changed knowledge
+  and a behaviour rule together. Read the differences as evidence, not
+  proof. Splitting the two, and held-out questions written after the
+  context was frozen, are the next experiments.
+
 ## Logs
 
 Every run writes to `evals/runs/<UTC timestamp>_<git sha>/`. **Runs are
 local-only:** `evals/runs/` is gitignored. The one exception is the
 15 Oct 2026 baseline (`20261015T134903Z_cc0b1c0c`, without its `raw/`
-folder), committed before the ignore rule as a reference point. Record
-later results in the project's notes, not in git.
+folder), committed before the ignore rule as a reference point. Headline
+scores go in the Results table above; everything else in the project's
+notes, not in git.
 
 | File | Contents |
 |---|---|
@@ -211,10 +242,15 @@ The data includes player names (personal data). It's public Transfermarkt
 data about public figures, so the risk is low, but it's flagged here per
 the repo's review standard.
 
-## Known data defect
+## Known data defects
 
-`competition_name` isn't unique: `premier-liga` is both Russia's and
-Ukraine's league, so `fct_player_performance_per_season_competition`
-merges the two, and joining it to `dim_competitions` on name doubles
-the rows. No question here depends on it; fixing it changes the fact's
-grain and is tracked in mcbreese/football_snowflake#76.
+- **`competition_name` isn't unique.** `premier-liga` is both Russia's and
+  Ukraine's league, so `fct_player_performance_per_season_competition`
+  merges the two, and joining it to `dim_competitions` on name doubles
+  the rows. The red-cards question (HR3) is built on it. Fixing it changes
+  the fact's grain and is tracked in mcbreese/football_snowflake#76.
+- **`club_id` in the performance fact is the player's current club,** not
+  the club they played for that season: `int_player_appearances` selects
+  `current_club_id`. Declan Rice's West Ham seasons show as Arsenal, and
+  78 club ids appear in one Premier League season. Found while writing
+  HJ4, which is built on it. Fixing it also changes the fact's grain.

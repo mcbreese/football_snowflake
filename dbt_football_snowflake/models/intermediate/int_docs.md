@@ -40,7 +40,7 @@ Pass-through of `stg_clubs`, contract-enforced as the intermediate-layer interfa
 {% enddocs %}
 
 {% docs int_player_transfers_model_description %}
-Joins `stg_transfers` to `stg_players` and `stg_clubs` (twice, for the from/to club) to enrich each transfer event with player and club names ahead of the Gold fact layer.
+Joins `stg_transfers` to `stg_clubs` (twice, for the from/to club) to add club names, and to `stg_players` only to derive the player's age at the transfer date, ahead of the Gold fact layer. One row per transfer. Current-state player attributes (name, position, height, current age and so on) are deliberately not carried here: they describe the player today, not at the transfer, so they belong in the player dimension (`dim_players`, joined on `player_id`), not at transfer grain.
 {% enddocs %}
 
 {% docs int_player_appearances_model_description %}
@@ -59,6 +59,10 @@ The name of the club the player was transferred *to*, resolved by joining `stg_t
 
 {% docs transfer_source_file %}
 The name or path of the raw file the transfer record was extracted from (data lineage/audit column, aliased from `stg_transfers.source_file`).
+{% enddocs %}
+
+{% docs transfer_age_in_years %}
+The player's age, in whole years, on the transfer date, via the `age_at_date` macro (correct to the day, unlike a bare `DATEDIFF(YEAR, ...)`). Distinct from `age_in_years`, which is the player's age as of today. Null when the player has no `date_of_birth` or no matching row in `stg_players`.
 {% enddocs %}
 
 {% docs player_appearance_sk %}

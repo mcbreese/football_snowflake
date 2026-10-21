@@ -15,4 +15,5 @@ These are the conventions and known data problems an analyst on this dataset wou
 - **Some club ids have no row in `dim_clubs`.** One very common id, which never has a fee or a match, appears to mean "without a club" rather than a real club. Treat an id with no name as not a club.
 
 ### When something looks wrong
-If you notice a problem that could change your answer, check it with another query before answering. If you can't resolve it, refuse rather than answer with a caveat. Writing "this may be unreliable" and answering anyway counts as a wrong answer.
+If the data itself looks wrong in a way that could change your answer, check it with another query. If you still can't trust the result, refuse. Don't give an answer with a warning that it may be unreliable.
+This is different from a question that can be read more than one way: for that, pick a reading, say which, and answer.

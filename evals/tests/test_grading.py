@@ -6,6 +6,7 @@ from evals.grading import (
     extract_sql_calls,
     grade_answer,
     is_grounded,
+    matched_reading,
     parse_answer,
     redact,
 )
@@ -25,6 +26,14 @@ NAME_Q = {
     "accept": ["Chelsea", "Chelsea FC", "Chelsea Football Club"],
 }
 REFUSE_Q = {"answer_type": "refuse", "expected": "REFUSE"}
+READINGS_Q = {
+    "answer_type": "number",
+    "tolerance": 0.05,
+    "readings": [
+        {"label": "paid only", "expected": 6.5},
+        {"label": "free included", "expected": 1.3},
+    ],
+}
 
 
 def transcript(sql: str, rows, is_error: bool = False) -> list[dict]:
@@ -113,6 +122,42 @@ def test_missing_answer_fails():
     assert not grade_answer(NUMBER_Q, None)
 
 
+def test_any_reading_passes_and_is_identified():
+    assert grade_answer(READINGS_Q, "6.5")
+    assert grade_answer(READINGS_Q, "1.3")
+    assert not grade_answer(READINGS_Q, "1.0")
+    assert matched_reading(READINGS_Q, "1.3")["label"] == "free included"
+    assert matched_reading(READINGS_Q, "1.0") is None
+
+
+def test_reading_keeps_shared_fields():
+    reading = matched_reading(READINGS_Q, "6.5")
+    assert reading["answer_type"] == "number"
+    assert reading["tolerance"] == 0.05
+    assert "readings" not in reading
+
+
+CLASH_Q = {
+    "answer_type": "name",
+    "accept_refuse": True,
+    "readings": [
+        {"label": "Bukayo Saka", "expected": "left", "accept": ["left"]},
+        {"label": "Mathis Saka", "expected": "right", "accept": ["right"]},
+    ],
+}
+
+
+def test_name_clash_accepts_every_player_and_a_refusal():
+    assert grade_answer(CLASH_Q, "left")
+    assert grade_answer(CLASH_Q, "right")
+    assert grade_answer(CLASH_Q, "REFUSE")
+    assert not grade_answer(CLASH_Q, "both")
+
+
+def test_refusal_still_fails_without_accept_refuse():
+    assert not grade_answer({**CLASH_Q, "accept_refuse": False}, "REFUSE")
+
+
 # extract_sql_calls -----------------------------------------------------
 
 
@@ -188,6 +233,37 @@ def test_errored_calls_do_not_count_as_grounding():
 
 def test_refusal_questions_have_no_grounding():
     assert is_grounded(REFUSE_Q, []) is None
+
+
+def test_question_with_readings_grounds_on_any_reading():
+    calls = extract_sql_calls(transcript("select avg(fee)", [["1.3"]]), TOOL)
+    assert is_grounded(READINGS_Q, calls)
+
+
+SUMMED_Q = {
+    "answer_type": "number",
+    "expected": 51,
+    "tolerance": 0,
+    "grounding": [{"all_of": [36, 12, 3]}],
+}
+
+
+def test_summed_answer_grounded_when_every_part_returned():
+    rows = [["premier-league", "36"], ["uefa-champions-league", "12"], ["fa-cup", "3"]]
+    calls = extract_sql_calls(transcript("select ...", rows), TOOL)
+    assert is_grounded(SUMMED_Q, calls)
+
+
+def test_summed_answer_not_grounded_when_a_part_is_missing():
+    rows = [["premier-league", "36"], ["uefa-champions-league", "12"]]
+    calls = extract_sql_calls(transcript("select ...", rows), TOOL)
+    assert not is_grounded(SUMMED_Q, calls)
+
+
+def test_summed_parts_from_metadata_do_not_count():
+    sql = "select * from information_schema.columns"
+    calls = extract_sql_calls(transcript(sql, [["36", "12", "3"]]), TOOL)
+    assert not is_grounded(SUMMED_Q, calls)
 
 
 # redact ----------------------------------------------------------------

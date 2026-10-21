@@ -45,8 +45,50 @@ def to_number(text: str) -> float | None:
     return float(match.group(0).replace(",", ""))  # "1,306" -> 1306.0
 
 
+def readings(question: dict) -> list[dict]:
+    """Every accepted reading of a question, each shaped like a question.
+
+    Most questions have one answer, so they are their own only reading.
+    A question with a `readings:` list (an ambiguous question with more
+    than one defensible answer) gets one entry per reading, each combined
+    with the question's shared fields like `answer_type`.
+    """
+    if "readings" not in question:
+        return [question]
+    shared = {k: v for k, v in question.items() if k != "readings"}
+    # {**a, **b} merges two dicts; b's values win where both have a key
+    return [{**shared, **reading} for reading in question["readings"]]
+
+
+def matched_reading(question: dict, parsed: str | None) -> dict | None:
+    """The first reading the answer matches, or None if it matches none."""
+    for reading in readings(question):
+        if _grade_one(reading, parsed):
+            return reading
+    return None
+
+
+def accepted_refusal(question: dict, parsed: str | None) -> bool:
+    """Is this a refusal the question allows? `accept_refuse: true` marks
+    questions where refusing is as fair as answering, such as a name shared
+    by several players, where picking one would need outside knowledge."""
+    return (
+        bool(question.get("accept_refuse"))
+        and parsed is not None
+        and parsed.upper() == REFUSE
+    )
+
+
 def grade_answer(question: dict, parsed: str | None) -> bool:
-    """The answer check. `question` is one entry from questions.yaml."""
+    """The answer check: does the answer match any accepted reading (or is
+    it an allowed refusal)? `question` is one entry from a questions file."""
+    if accepted_refusal(question, parsed):
+        return True
+    return matched_reading(question, parsed) is not None
+
+
+def _grade_one(question: dict, parsed: str | None) -> bool:
+    """Check the answer against a single reading."""
     if parsed is None:  # agent gave no ANSWER: line -> fail
         return False
     answer_type = question["answer_type"]  # "number", "name" or "refuse"
@@ -153,18 +195,35 @@ def grounding_targets(question: dict) -> list[dict]:
     `grounding` values where the queried value legitimately differs from
     the final answer (A3: the agent may query the raw EUR average and
     convert it to millions itself).
+
+    A `grounding` entry written as `{all_of: [36, 12, 3]}` is for an answer
+    the agent adds up itself (51 = 36 + 12 + 3): it counts only if every
+    one of those values was returned.
+
+    For a question with several readings, this covers every reading. Pass
+    a single reading instead to ground only that one.
     """
-    tolerance = float(question.get("tolerance", 0))
-    targets = [
-        {"value": question["expected"], "tolerance": tolerance}
-    ]  # always included
-    for extra in question.get("grounding") or []:  # [] if the question has none
-        if isinstance(extra, dict):  # written as {value: ..., tolerance: ...}
-            targets.append(
-                {"value": extra["value"], "tolerance": float(extra.get("tolerance", 0))}
-            )
-        else:  # written as a bare value
-            targets.append({"value": extra, "tolerance": tolerance})
+    targets = []
+    for reading in readings(question):
+        tolerance = float(reading.get("tolerance", 0))
+        targets.append({"value": reading["expected"], "tolerance": tolerance})
+        for extra in reading.get("grounding") or []:  # [] if there are none
+            if isinstance(extra, dict) and "all_of" in extra:  # {all_of: [...]}
+                targets.append(
+                    {
+                        "all_of": extra["all_of"],
+                        "tolerance": float(extra.get("tolerance", tolerance)),
+                    }
+                )
+            elif isinstance(extra, dict):  # written as {value: ..., tolerance: ...}
+                targets.append(
+                    {
+                        "value": extra["value"],
+                        "tolerance": float(extra.get("tolerance", 0)),
+                    }
+                )
+            else:  # written as a bare value
+                targets.append({"value": extra, "tolerance": tolerance})
     return targets
 
 
@@ -173,16 +232,36 @@ def is_grounded(question: dict, sql_calls: list[dict]) -> bool | None:
     is nothing to ground, so they can be told apart from a real failure."""
     if question["answer_type"] == "refuse":
         return None
+    evidence = [call for call in sql_calls if _is_evidence(call)]
+    answer_type = question["answer_type"]
     for target in grounding_targets(question):  # each acceptable value
-        for call in sql_calls:  # each query the agent ran
-            if call.get("is_error"):  # failed queries don't count as evidence
-                continue
-            sql = (call.get("sql") or "").lower().strip()
-            if sql.startswith(("show", "desc")) or "information_schema" in sql:
-                continue  # metadata queries don't count as evidence
-            if _value_in_result(target, question["answer_type"], call.get("rows")):
-                return True  # found it: stop looking
+        if "all_of" in target:
+            # Every part must appear somewhere in what came back.
+            parts = [
+                {"value": v, "tolerance": target["tolerance"]} for v in target["all_of"]
+            ]
+            if all(
+                any(
+                    _value_in_result(part, answer_type, c.get("rows")) for c in evidence
+                )
+                for part in parts
+            ):
+                return True
+        elif any(
+            _value_in_result(target, answer_type, c.get("rows")) for c in evidence
+        ):
+            return True  # found it: stop looking
     return False  # checked everything, value never appeared in any result
+
+
+def _is_evidence(call: dict) -> bool:
+    """Can this query's rows count as evidence for an answer?"""
+    if call.get("is_error"):  # failed queries don't count as evidence
+        return False
+    sql = (call.get("sql") or "").lower().strip()
+    if sql.startswith(("show", "desc")) or "information_schema" in sql:
+        return False  # metadata queries don't count as evidence
+    return True
 
 
 def _value_in_result(target: dict, answer_type: str, rows) -> bool:

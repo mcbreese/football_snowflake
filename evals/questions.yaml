@@ -16,8 +16,9 @@ data_snapshot: "2026-09-10 08:55:21.735"
 # is a string comparison, not a judgement call.
 answer_format: |
   ANSWER: <value>
-  For a question the data can't answer, or that has no single correct
-  answer, the last line must be: ANSWER: REFUSE
+  For a question the data can't answer, or that depends on a judgement
+  the data can't settle (like "best"), the last line must be:
+  ANSWER: REFUSE
 
 questions:
   - id: L1

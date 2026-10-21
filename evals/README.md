@@ -11,7 +11,11 @@ Run every command from the repo root.
 | Pilot: one question, once | `uv run --env-file secrets/.env.eval python evals/run_evals.py --only L1 --trials 1` |
 | Run a few questions | `uv run --env-file secrets/.env.eval python evals/run_evals.py --only L1 A3 R1` |
 | Full baseline: every question, 3 times | `uv run --env-file secrets/.env.eval python evals/run_evals.py` |
+| Run the hint-free set | `uv run --env-file secrets/.env.eval python evals/run_evals.py --questions evals/questions_hard.yaml` |
+| Run the hint-free set with a context file | `uv run --env-file secrets/.env.eval python evals/run_evals.py --questions evals/questions_hard.yaml --context evals/context.md` |
 | Read a run's results, nicely indented | `uv run python -m json.tool --json-lines evals/runs/<run folder>/results.jsonl` |
+| See why trials failed: answer, reading, checks and the SQL run | `uv run python evals/show_failures.py evals/runs/<run folder>` |
+| Re-score a run after a grading change (free, no calls) | `uv run python evals/regrade.py evals/runs/<run folder>` |
 | Run the tests (no secrets needed) | `uv run pytest evals/tests` |
 
 How a command is built:
@@ -46,7 +50,17 @@ flowchart TB
   LG --> S["Summary: pass@1, pass@3, pass^3, cost"]
 ```
 
-## `questions.yaml`
+## Answer keys
+
+- **`questions.yaml`** is the regression suite. Each question carries its own
+  hints ("fee greater than zero, 1 July to 30 June"), so it mostly tests
+  whether the agent follows precise instructions. It scored 100% on 15 Oct
+  2026 and should stay there.
+- **`questions_hard.yaml`** asks the same verified facts the way a user
+  would, without the hints. Run once without and once with `--context`;
+  the score difference measures what the context file is worth.
+
+The rest of this section applies to both files.
 
 Each entry has the question, an `expected` answer, the `sql` that produced
 it, and a `cross_check_sql` written a different way that must agree. Every
@@ -70,6 +84,20 @@ The agent's reply must end with `ANSWER: <value>` (or `ANSWER: REFUSE`).
 | `name` | it matches any value in `accept`, case-insensitive |
 | `refuse` | the answer is exactly `REFUSE` |
 
+**Several defensible readings.** A hint-free question can have more than
+one fair answer ("average fee": paid transfers only, or free transfers
+too?). Such a question lists each one under `readings`, with its own
+`label`, `expected` value and verified SQL, and any of them passes.
+`results.jsonl` records which reading the agent chose in `reading`, and the
+grounding check uses that reading's value. Refusing a question that has
+readings fails, unless it's marked `accept_refuse: true`.
+
+**Name clashes.** When a name belongs to several players ("Saka", "João
+Pedro"), every player's answer is a reading, and `accept_refuse: true`
+also passes a refusal: picking "the famous one" would need knowledge from
+outside the data, which the prompt forbids. What fails is mixing players
+up, such as adding all three João Pedros' goals together.
+
 **Grounding check.** For every answerable question, the expected value
 (or an alternative listed under `grounding`) must also appear in the rows
 returned by at least one SQL query the agent actually ran. This catches
@@ -77,6 +105,13 @@ answers recalled from training data: famous facts like Haaland's 36 goals
 can be "known" without querying. A trial passes only when both checks
 pass. Both are logged separately, so a gap between the answer-only score
 and the grounded score shows how often the agent is guessing.
+
+When the agent works out the answer itself from what it read (adding up
+goals per competition, say), the answer never appears in the rows. For
+those questions, `grounding` lists the parts as `all_of: [36, 12, 3]`, and
+the trial counts as grounded only if **every** part came back from a query.
+It's written per question so that each one is a reviewed decision, not a
+general loosening of the check.
 
 **Scores.**
 
@@ -92,7 +127,9 @@ and the grounded score shows how often the agent is guessing.
 Each question runs through headless Claude Code (`claude --bare -p`),
 connected only to Snowflake's managed MCP server, the same server the
 Claude.ai connector uses, with every built-in tool switched off. Every
-trial starts a fresh session.
+trial starts a fresh session. Four trials run at once by default
+(`--concurrency`). Going much higher risks API rate limits and queries
+queueing on the XS warehouse.
 
 **Run it locally, not in a cloud session.** One-time setup:
 
@@ -119,15 +156,53 @@ uv run python evals/run_evals.py --dry-run                                      
 ```
 
 Spending is capped per trial (`--max-budget-usd`, default 0.50) and per
-run (`--max-total-usd`, default 10).
+run (`--max-total-usd`, default 10). The run cap is checked before each
+trial starts, so trials already running can take it over by up to
+`--concurrency` trials' worth.
+
+**Changed only the grading?** Don't re-run: `regrade.py` re-scores a run's
+saved transcripts with the current grader and answer key in seconds. It
+writes `results_regraded.jsonl` and `regrade.json` next to the originals,
+never over them, and lists every trial whose result changed.
+
+## Results
+
+Headline numbers only; per-question analysis lives in the project's notes,
+and run folders stay local (see Logs). Every score is regraded under the
+current grading rules (`regrade.py`), so the rows are comparable.
+
+| Date | Questions | Context file | pass@1 | pass^3 | LLM cost |
+|---|---|---|---|---|---|
+| 15 Oct 2026 | `questions.yaml` (11, with hints) | none | 33/33 (100%) | 100% | $0.36 |
+| 16 Oct 2026 | `questions_hard.yaml` (18, hint-free) | none | 51/54 (94%) | 89% | $0.78 |
+| 21 Oct 2026 | `questions_hard.yaml` (18, hint-free) | `context.md` | 54/54 (100%) | 100% | $0.73 |
+
+What the runs showed:
+
+- **The hinted set saturated.** 100% measured instruction-following, not
+  skill, which is why the hint-free set exists.
+- **Without context, the agent noticed problems and answered anyway.**
+  Each real failure on 16 Oct (Declan Rice's 2021/22 club, the league
+  with most red cards) contained the agent's own warning that the data
+  might be wrong, followed by an answer.
+- **With context, both failures went to 3/3 and nothing got worse.** The
+  context also steered which reading the agent chose on ambiguous
+  questions (all three average-fee answers used its null-fee definition).
+- **The evals found a real data bug:** see Known data defects.
+- **Limits.** One run of 3 trials per question; the same author wrote the
+  questions and the context file; and the context run changed knowledge
+  and a behaviour rule together. Read the differences as evidence, not
+  proof. Splitting the two, and held-out questions written after the
+  context was frozen, are the next experiments.
 
 ## Logs
 
 Every run writes to `evals/runs/<UTC timestamp>_<git sha>/`. **Runs are
 local-only:** `evals/runs/` is gitignored. The one exception is the
 15 Oct 2026 baseline (`20261015T134903Z_cc0b1c0c`, without its `raw/`
-folder), committed before the ignore rule as a reference point. Record
-later results in the project's notes, not in git.
+folder), committed before the ignore rule as a reference point. Headline
+scores go in the Results table above; everything else in the project's
+notes, not in git.
 
 | File | Contents |
 |---|---|
@@ -167,10 +242,15 @@ The data includes player names (personal data). It's public Transfermarkt
 data about public figures, so the risk is low, but it's flagged here per
 the repo's review standard.
 
-## Known data defect
+## Known data defects
 
-`competition_name` isn't unique: `premier-liga` is both Russia's and
-Ukraine's league, so `fct_player_performance_per_season_competition`
-merges the two, and joining it to `dim_competitions` on name doubles
-the rows. No question here depends on it; fixing it changes the fact's
-grain and is tracked in mcbreese/football_snowflake#76.
+- **`competition_name` isn't unique.** `premier-liga` is both Russia's and
+  Ukraine's league, so `fct_player_performance_per_season_competition`
+  merges the two, and joining it to `dim_competitions` on name doubles
+  the rows. The red-cards question (HR3) is built on it. Fixing it changes
+  the fact's grain and is tracked in mcbreese/football_snowflake#76.
+- **`club_id` in the performance fact is the player's current club,** not
+  the club they played for that season: `int_player_appearances` selects
+  `current_club_id`. Declan Rice's West Ham seasons show as Arsenal, and
+  78 club ids appear in one Premier League season. Found while writing
+  HJ4, which is built on it. Fixing it also changes the fact's grain.

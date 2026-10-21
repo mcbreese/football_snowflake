@@ -24,7 +24,10 @@ players as (
         -- for explicitness to ensure consistency in our data contract.
         CAST(date_of_birth as date) as date_of_birth,
         -- facts
-        DATEDIFF(year, date_of_birth, CURRENT_DATE()) as age_in_years,
+        -- Age as of the snapshot load, not today, so a rebuild of the same
+        -- data always gives the same answer.
+        {{ age_at_date('date_of_birth', 'loaded_timestamp::date') }}
+            as age_in_years,
         last_season,
         -- metadata
         loaded_timestamp,

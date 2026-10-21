@@ -62,7 +62,7 @@ The name or path of the raw file the transfer record was extracted from (data li
 {% enddocs %}
 
 {% docs transfer_age_in_years %}
-The player's age, in whole years, on the transfer date, via the `age_at_date` macro (correct to the day, unlike a bare `DATEDIFF(YEAR, ...)`). Distinct from `age_in_years`, which is the player's age as of today. Null when the player has no `date_of_birth` or no matching row in `stg_players`.
+The player's age, in whole years, on the transfer date, via the `age_at_date` macro (correct to the day, unlike a bare `DATEDIFF(YEAR, ...)`). Distinct from `age_in_years`, which is the player's age at the latest data snapshot. Null when the player has no `date_of_birth` or no matching row in `stg_players`.
 {% enddocs %}
 
 {% docs player_appearance_sk %}

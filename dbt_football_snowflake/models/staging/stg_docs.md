@@ -142,7 +142,7 @@ The player's date of birth, standardised as a DATE type.
 {% enddocs %}
 
 {% docs age_in_years %}
-The player's age at the time of the latest data snapshot, calculated in years.
+The player's age, in whole years, on the date the current data snapshot was loaded (`loaded_timestamp`), via the `age_at_date` macro. Anchored to the load date rather than today so rebuilding the same data always gives the same value; it moves forward only when fresh source data is loaded. For age at a specific event, use `transfer_age_in_years` or `appearance_age_in_years`.
 {% enddocs %}
 
 {% docs last_season %}

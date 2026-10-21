@@ -69,6 +69,10 @@ The name or path of the raw file the transfer record was extracted from (data li
 The player's age, in whole years, at the date of the appearance (`DATEDIFF(YEAR, date_of_birth, appearance_date)`) — distinct from `age_in_years`, which is the player's age as of the latest data snapshot.
 {% enddocs %}
 
+{% docs appearance_club_id %}
+**Foreign Key (FK).** The club the player represented in this appearance (`stg_appearances.player_club_id`), not their current club (`stg_players.current_club_id`). A player who changes club mid-season carries a different `club_id` on appearances either side of the move.
+{% enddocs %}
+
 {% docs home_away %}
 Whether the player's club was the `home` or `away` side for this appearance, derived by comparing `stg_appearances.player_club_id` to `stg_games.home_club_id`.
 {% enddocs %}

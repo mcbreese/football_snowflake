@@ -28,7 +28,8 @@ with player_appearances as (
         co.name as competition_name,
         co.type as competition_type,
         pl.player_id,
-        pl.current_club_id as club_id,
+        -- The club for this appearance, not stg_players.current_club_id
+        ap.player_club_id as club_id,
         gm.game_id,
         ap.appearance_id,
         -- foreign keys

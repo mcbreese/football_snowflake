@@ -26,6 +26,11 @@ on:
   # waiting for the next scheduled run (e.g. to backfill after a source
   # data reload).
   workflow_dispatch:
+    inputs:
+      full_refresh:
+        description: "Rebuild incremental models from scratch (--full-refresh), e.g. after a logic change to int_player_appearances"
+        type: boolean
+        default: false
 
 jobs:
   scheduled-build:
@@ -71,8 +76,19 @@ jobs:
       # The whole point of this job is to refresh models that wouldn't be
       # reselected by a code-change diff (e.g. incremental models against
       # moved source data).
+      # FULL_REFRESH is only ever true on a manual run with the box ticked;
+      # a scheduled run has no inputs, so it stays an incremental build.
+      # Passed via env, not interpolated into the script, so input text
+      # can never be executed as shell.
       - name: Run dbt build (prod, full)
-        run: uv run dbt build --target prod --profiles-dir .
+        env:
+          FULL_REFRESH: ${{ inputs.full_refresh }}
+        run: |
+          if [ "$FULL_REFRESH" = "true" ]; then
+            uv run dbt build --target prod --profiles-dir . --full-refresh
+          else
+            uv run dbt build --target prod --profiles-dir .
+          fi
 
       # Publishes under the same artifact name dbt_deploy.yml uses, since
       # this build is against the same prod state and, being a full build,

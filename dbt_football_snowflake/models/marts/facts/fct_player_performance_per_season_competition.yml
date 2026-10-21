@@ -28,7 +28,7 @@ models:
                 to: ref('dim_players')
                 field: player_id
       - name: club_id
-        description: "{{ doc('club_id') }}"
+        description: "{{ doc('appearance_club_id') }}"
         data_type: INT
         tests:
           - not_null

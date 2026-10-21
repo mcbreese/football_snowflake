@@ -24,6 +24,10 @@ models:
       - name: player_name
         description: "{{ doc('player_name') }}"
         data_type: STRING
+        config:
+          meta:
+            personal_data: true
+          tags: ["personal_data"]
       - name: nationality
         description: "{{ doc('nationality') }}"
         data_type: STRING
@@ -42,6 +46,10 @@ models:
       - name: date_of_birth
         description: "{{ doc('date_of_birth') }}"
         data_type: DATE
+        config:
+          meta:
+            personal_data: true
+          tags: ["personal_data"]
       - name: age_in_years
         description: "{{ doc('age_in_years') }}"
         data_type: INT

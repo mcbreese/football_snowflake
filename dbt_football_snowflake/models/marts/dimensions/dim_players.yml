@@ -26,6 +26,10 @@ models:
       - name: player_name
         description: "{{ doc('player_name') }}"
         data_type: STRING
+        config:
+          meta:
+            personal_data: true
+          tags: ["personal_data"]
         tests:
           - not_null
       - name: nationality

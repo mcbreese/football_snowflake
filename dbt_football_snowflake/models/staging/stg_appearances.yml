@@ -53,6 +53,10 @@ models:
       - name: player_name
         description: "{{ doc('player_name') }}"
         data_type: STRING
+        config:
+          meta:
+            personal_data: true
+          tags: ["personal_data"]
       - name: appearance_date
         description: "{{ doc('appearance_date') }}"
         data_type: DATE

@@ -18,12 +18,20 @@ models:
       - name: player_name
         description: "{{ doc('player_name') }}"
         data_type: STRING
+        config:
+          meta:
+            personal_data: true
+          tags: ["personal_data"]
       - name: club_name
         description: "{{ doc('club_name') }}"
         data_type: STRING
       - name: date_of_birth
         description: "{{ doc('date_of_birth') }}"
         data_type: DATE
+        config:
+          meta:
+            personal_data: true
+          tags: ["personal_data"]
       - name: appearance_date
         description: "{{ doc('appearance_date') }}"
         data_type: DATE

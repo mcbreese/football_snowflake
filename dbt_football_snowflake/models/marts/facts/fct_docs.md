@@ -7,7 +7,7 @@ This file contains documentation blocks for models and columns specific to the f
 ## Model Descriptions
 
 {% docs fct_performance_model_description %}
-This model aggregates a player's full career performance metrics by **Player**, **Season**, and **Competition**. It provides key derived metrics such as goals per 90 minutes and win/loss/draw counts, designed for in-depth comparative player analysis.
+This model aggregates a player's full career performance metrics by **Player**, **Club**, **Season**, and **Competition**, where Club is the club the player represented in those appearances. A player who moved mid-season within one competition has one row per club, so sum across `club_id` for a player's competition total. It provides key derived metrics such as goals per 90 minutes and win/loss/draw counts, designed for in-depth comparative player analysis.
 {% enddocs %}
 
 {% docs fct_transfers_model_description %}

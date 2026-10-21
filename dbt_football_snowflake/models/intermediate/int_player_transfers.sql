@@ -35,16 +35,10 @@ joined as (
         tr.transfer_fee,
         tr.market_value_in_eur,
 
-        -- Player Details (Dimensions)
-        pl.player_name,
-        pl.nationality,
-        pl.position,
-        pl.sub_position,
-        pl.foot,
-        pl.height_in_cm,
-        pl.date_of_birth,
-        pl.age_in_years,
-        pl.last_season,
+        -- Age at the transfer date, not today. Other player attributes
+        -- are current-state only and belong in dim_players.
+        {{ age_at_date('pl.date_of_birth', 'tr.transfer_date') }}
+            as transfer_age_in_years,
 
         -- Foreign Keys
         tr.player_id,
@@ -57,7 +51,7 @@ joined as (
 
     from transfers as tr
 
-    -- Join to Player Details
+    -- Join to Player for date_of_birth only (age at transfer)
     left join {{ ref('stg_players') }} as pl
         on tr.player_id = pl.player_id
 

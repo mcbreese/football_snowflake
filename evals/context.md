@@ -5,7 +5,7 @@ These are the conventions and known data problems an analyst on this dataset wou
 ### Conventions
 - `season` is the year a season starts: 2023 means 2023/24.
 - `transfer_fee` is in euros. A fee of 0 is a free transfer. A null fee is unknown (often undisclosed), so it is neither free nor paid.
-- `market_value_in_eur` on a transfer is the player's estimated value at the time, not what was paid. "Expensive" and "cost" mean the fee; "valuable" means market value.
+- `market_value_in_eur` on a transfer is the player's estimated value at the time, not what was paid.
 - `transfer_season` labels a transfer window, and a few rows are dated outside it. For a date range, filter on `transfer_date`.
 
 ### Known data problems

@@ -37,7 +37,7 @@ with player_appearances as (
         gm.away_club_id,
         ap.loaded_timestamp as appearance_loaded_timestamp,
         COALESCE(cl.name, 'Unknown') as club_name,
-        DATEDIFF(year, pl.date_of_birth, ap.appearance_date)
+        {{ age_at_date('pl.date_of_birth', 'ap.appearance_date') }}
             as appearance_age_in_years,
         case
             when ap.player_club_id = gm.home_club_id then 'home'

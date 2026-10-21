@@ -70,7 +70,7 @@ The player's age, in whole years, on the transfer date, via the `age_at_date` ma
 {% enddocs %}
 
 {% docs appearance_age_in_years %}
-The player's age, in whole years, at the date of the appearance (`DATEDIFF(YEAR, date_of_birth, appearance_date)`) — distinct from `age_in_years`, which is the player's age as of the latest data snapshot.
+The player's age, in whole years, on the date of the appearance, via the `age_at_date` macro (correct to the day, unlike a bare `DATEDIFF(YEAR, ...)`). Distinct from `age_in_years`, which is the player's current age. Null when the player has no `date_of_birth`.
 {% enddocs %}
 
 {% docs appearance_club_id %}

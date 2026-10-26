@@ -151,7 +151,7 @@ followed convention.
 
 ## CI
 
-Four workflows, each with a distinct role/target — see
+Five workflows. The four dbt ones each have a distinct role/target — see
 `snowflake/roles/setup_ci_prod_roles.sql` for the underlying Snowflake role/db
 setup:
 
@@ -185,6 +185,10 @@ setup:
 - `.github/workflows/dbt_ci_teardown.yml` — drops a PR's `CI_ANALYTICS`
   scratch schema on merge or close (`dbt run-operation drop_ci_schema
   --target ci`).
+- `.github/workflows/delete_verify_branches.yml` — deletes a `ci/verify-*`
+  branch when its throwaway PR closes unmerged. The repo's "delete head
+  branch on merge" setting covers merged PRs only, and cloud sessions
+  can't delete branches. No Snowflake access.
 
 `dbt_test.yml` also runs a `lint` job, independent of `run-dbt` (no
 `needs:`, so a style failure surfaces without waiting on the build).

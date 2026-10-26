@@ -1,0 +1,40 @@
+# The name of the pipeline as it appears in the GitHub Actions dashboard
+name: Delete Throwaway Verify Branches
+
+# ci/verify-* branches back throwaway "DO NOT MERGE" PRs that are always
+# closed unmerged, so the repo's "delete head branch on merge" setting never
+# removes them, and cloud sessions can't delete branches themselves.
+on:
+  pull_request:
+    types: [closed]
+    branches: [main]
+
+# Only this job's token gets write access, and only to repo contents (refs).
+permissions:
+  contents: write
+
+jobs:
+  delete-branch:
+    # Merged PRs are already handled by the repo setting; the repo check
+    # skips fork PRs, whose branches live elsewhere.
+    if: >-
+      startsWith(github.event.pull_request.head.ref, 'ci/verify-') &&
+      !github.event.pull_request.merged &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      # Branch name goes through env, not inline ${{ }}, so a crafted name
+      # can't inject shell. Already-deleted is fine; any other error fails.
+      - name: Delete head branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BRANCH: ${{ github.event.pull_request.head.ref }}
+        run: |
+          if ! out=$(gh api -X DELETE "repos/${GITHUB_REPOSITORY}/git/refs/heads/${BRANCH}" 2>&1); then
+            if grep -q "Reference does not exist" <<< "$out"; then
+              echo "Branch ${BRANCH} already deleted"
+            else
+              echo "$out" >&2
+              exit 1
+            fi
+          fi

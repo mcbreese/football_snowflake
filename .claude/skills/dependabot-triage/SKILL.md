@@ -9,7 +9,9 @@ Repo: `mcbreese/football_snowflake`. Dependabot opens grouped PRs on Mondays at 
 
 ## Merge policy (edit this section to change autonomy)
 
-**Mode: `report-only`**
+**Mode: `merge-verified`**
+
+Set to `merge-verified` by Tom on 26 Oct 2026. Change it back to `report-only` to stop automatic merging.
 
 - `report-only`: investigate, run throwaway verification PRs (closed afterwards), then report what is ready to merge. Merge nothing.
 - `merge-verified`: also merge each PR that is verified and hits no hard stop, one at a time.

@@ -54,19 +54,19 @@ Dependabot runs get no Actions secrets, so `dbt_test.yml` skips `run-dbt` and th
 1. `create_branch` `ci/verify-<topic>` from the Dependabot branch head.
 2. For dbt, adapter, connector or TLS bumps, also make one harmless edit to `dbt_football_snowflake/models/staging/stg_clubs.sql` (for example remove a duplicated comment line). A lockfile-only PR selects zero models under `state:modified+` and proves only that `dbt debug` connects; touching `stg_clubs` rebuilds and tests it plus everything downstream in a throwaway `CI_ANALYTICS.pr_<n>` schema. Get the blob sha with `get_file_contents` on the new branch, then `create_or_update_file`.
 3. Open a **draft** PR to main titled `DO NOT MERGE: throwaway CI run to verify <thing> (#<n>)`, saying what to check. Subscribe to it.
-4. Read the result. The PR's check list also contains the earlier Dependabot run for the same SHA (skipped and green): ignore it, use the new run. `list_workflow_jobs` on the new run id, then `get_job_logs` with `tail_lines` about 45 for the build and confirm `Done. PASS=<n> ... ERROR=0` with n above zero.
-5. Close the throwaway. This triggers `dbt_ci_teardown.yml`, which drops its CI schema: confirm it succeeded.
+4. Read the result. The PR's check list also contains the earlier Dependabot run for the same SHA (skipped and green): ignore it, use the new run. `list_workflow_jobs` on the new run id, then `get_job_logs` with `tail_lines` about 45 and `return_content: true` for the build and confirm `Done. PASS=<n> ... ERROR=0` with n above zero.
+5. Close the throwaway. This triggers `dbt_ci_teardown.yml`, which drops its CI schema, and `delete_verify_branches.yml`, which deletes the `ci/verify-*` branch: confirm both succeeded.
 
 Never run `dbt build/run/test` locally against `dev`, `ci` or `prod` (see CLAUDE.md). CI is the sanctioned path.
 
 ## Cleanup
 
 - Local: `git checkout main && git merge --ff-only origin/main`, delete merged local branches.
-- Remote: `git push --delete` returns HTTP 403 in cloud sessions and there is no GitHub delete-branch tool. List leftover `ci/verify-*` branches for the user to delete. Never touch branches you did not create.
+- Remote: `delete_verify_branches.yml` deletes each `ci/verify-*` branch when its throwaway PR closes unmerged. Confirm it ran (the branch is gone from `list_branches`). Cloud sessions cannot delete branches themselves (`git push --delete` returns HTTP 403, and there is no GitHub delete-branch tool), so only if the workflow failed or the branch survives, list it for the user to delete. Never touch branches you did not create.
 
 ## Report
 
-One short message, plain English, UK spelling, no em dashes. Lead with the outcome: merged, ready, or held, and why. Call out security fixes with their advisory ids and what they fix. List what is left for the user (branches to delete, local pre-commit run, anything manual). Give detail only for unexpected things.
+One short message, plain English, UK spelling, no em dashes. Lead with the outcome: merged, ready, or held, and why. Call out security fixes with their advisory ids and what they fix. List what is left for the user (local pre-commit run, a `ci/verify-*` branch the workflow failed to delete, anything manual). Give detail only for unexpected things.
 
 ## Standing facts about this repo
 

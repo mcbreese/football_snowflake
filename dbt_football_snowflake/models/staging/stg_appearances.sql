@@ -18,7 +18,7 @@ appearances as (
             -- key
         {{
             dbt_utils.generate_surrogate_key(
-                ['appearance_id', 'game_id', 'player_id']
+                ['ap.appearance_id', 'ap.game_id', 'ap.player_id']
             )
         }}
             as appearance_player_sk,
@@ -26,7 +26,7 @@ appearances as (
         ap.appearance_id,
         ap.game_id,
         ap.player_id,
-        COALESCE(player_club_id, 0) as player_club_id,
+        COALESCE(ap.player_club_id, 0) as player_club_id,
         ap.competition_id,
         -- dimensions
         ap.player_name,

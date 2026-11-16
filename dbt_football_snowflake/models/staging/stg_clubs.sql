@@ -6,7 +6,6 @@ clubs as (
     -- primary Key
     select
         -- create surrogate key
-        -- create surrogate key
         {{ dbt_utils.generate_surrogate_key(['club_id']) }} as club_sk,
         club_id,
         -- foreign Keys
